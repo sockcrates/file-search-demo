@@ -12,8 +12,10 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
 
   line_scanning::LineScanner scanner(reader);
   line_scanning::LineComparator comparator(reader);
+  // Every line before low is less than term; high bounds the earliest candidate.
   std::uint64_t low = 0;
   std::uint64_t high = file_size;
+  // best is the earliest candidate encountered so far.
   std::optional<line_scanning::LineRange> best;
 
   while (low < high) {
