@@ -14,6 +14,7 @@ option(ENABLE_CLANG_TIDY "Run clang-tidy when it is available" ON)
 
 add_library(find_core
   src/cli/arguments.cpp
+  src/file_io/error.cpp
   src/file_io/file_reader.cpp
   src/file_io/memory_reader.cpp
   src/line_scanning/line_scanner.cpp

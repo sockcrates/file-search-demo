@@ -1,11 +1,10 @@
 #include "file_io/file_reader.h"
+#include "file_io/error.h"
 
 #include <algorithm>
 #include <cerrno>
-#include <cstring>
 #include <limits>
-#include <stdexcept>
-#include <string>
+#include <system_error>
 
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -14,59 +13,96 @@
 
 namespace find::file_io {
 namespace {
-std::runtime_error system_error(const std::string &action, const std::filesystem::path &path) {
-  return std::runtime_error(action + " '" + path.string() + "': " + std::strerror(errno));
-}
+
+[[nodiscard]] std::error_code captured_errno() noexcept { return {errno, std::generic_category()}; }
+
 } // namespace
 
-FileReader::FileReader(const std::filesystem::path &path) {
-  descriptor_ = open(path.c_str(), O_RDONLY);
-  if (descriptor_ == -1)
-    throw system_error("cannot open", path);
-  struct stat details{};
-  if (fstat(descriptor_, &details) == -1) {
-    const auto error = system_error("cannot inspect", path);
-    close(descriptor_);
-    descriptor_ = -1;
-    throw error;
-  }
-  if (details.st_size < 0)
-    throw std::runtime_error("file has a negative size");
-  if (!S_ISREG(details.st_mode)) {
-    close(descriptor_);
-    descriptor_ = -1;
-    throw std::runtime_error("file is not a regular file");
-  }
-  size_ = static_cast<std::uint64_t>(details.st_size);
-  if (size_ > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    close(descriptor_);
-    descriptor_ = -1;
-    throw std::runtime_error("file size exceeds platform limit");
-  }
-  if (size_ != 0) {
-    const auto mapped =
-        mmap(nullptr, static_cast<std::size_t>(size_), PROT_READ, MAP_PRIVATE, descriptor_, 0);
-    if (mapped == MAP_FAILED) {
-      const auto error = system_error("cannot map", path);
-      close(descriptor_);
-      descriptor_ = -1;
-      throw error;
+class FileReader::FileDescriptor final {
+public:
+  explicit FileDescriptor(int descriptor) noexcept : descriptor_(descriptor) {}
+  ~FileDescriptor() noexcept {
+    if (descriptor_ != -1) {
+      static_cast<void>(close(descriptor_));
     }
-    mapping_ = static_cast<const std::byte *>(mapped);
   }
+
+  FileDescriptor(const FileDescriptor &) = delete;
+  FileDescriptor &operator=(const FileDescriptor &) = delete;
+
+  [[nodiscard]] int get() const noexcept { return descriptor_; }
+
+private:
+  int descriptor_;
+};
+
+class FileReader::Mapping final {
+public:
+  Mapping(void *address, std::size_t size) noexcept : address_(address), size_(size) {}
+  ~Mapping() noexcept { static_cast<void>(munmap(address_, size_)); }
+
+  Mapping(const Mapping &) = delete;
+  Mapping &operator=(const Mapping &) = delete;
+
+  [[nodiscard]] const std::byte *data() const noexcept {
+    return static_cast<const std::byte *>(address_);
+  }
+
+private:
+  void *address_;
+  std::size_t size_;
+};
+
+FileReader::FileReader(const std::filesystem::path &path) {
+  constexpr int flags = O_RDONLY | O_CLOEXEC | O_NONBLOCK;
+  const auto opened_descriptor = open(path.c_str(), flags);
+  if (opened_descriptor == -1) {
+    throw FileError(FileOperation::open, path, captured_errno());
+  }
+  auto descriptor = std::make_unique<FileDescriptor>(opened_descriptor);
+
+  struct stat details{};
+  if (fstat(descriptor->get(), &details) == -1) {
+    throw FileError(FileOperation::inspect, path, captured_errno());
+  }
+  if (details.st_size < 0) {
+    throw FileError(FileOperation::validate_size, path,
+                    std::make_error_code(std::errc::value_too_large));
+  }
+  if (!S_ISREG(details.st_mode)) {
+    throw FileError(FileOperation::validate_regular_file, path,
+                    std::make_error_code(std::errc::invalid_argument));
+  }
+  const auto size = static_cast<std::uint64_t>(details.st_size);
+  if (size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    throw FileError(FileOperation::validate_size, path,
+                    std::make_error_code(std::errc::value_too_large));
+  }
+  std::unique_ptr<Mapping> mapping;
+  if (size != 0U) {
+    const auto mapped =
+        mmap(nullptr, static_cast<std::size_t>(size), PROT_READ, MAP_PRIVATE, descriptor->get(), 0);
+    if (mapped == MAP_FAILED) {
+      throw FileError(FileOperation::map, path, captured_errno());
+    }
+    mapping = std::make_unique<Mapping>(mapped, static_cast<std::size_t>(size));
+  }
+
+  size_ = size;
+  descriptor_ = std::move(descriptor);
+  path_ = path;
+  mapping_ = std::move(mapping);
 }
 
-FileReader::~FileReader() {
-  if (mapping_ != nullptr)
-    munmap(const_cast<std::byte *>(mapping_), static_cast<std::size_t>(size_));
-  if (descriptor_ != -1)
-    close(descriptor_);
-}
+FileReader::~FileReader() = default;
 
 std::uint64_t FileReader::size() const { return size_; }
 
 std::span<const std::byte> FileReader::bytes() const {
-  return {mapping_, static_cast<std::size_t>(size_)};
+  if (mapping_ == nullptr) {
+    return {};
+  }
+  return {mapping_->data(), static_cast<std::size_t>(size_)};
 }
 
 std::size_t FileReader::read(std::uint64_t offset, std::byte *destination,
@@ -74,14 +110,20 @@ std::size_t FileReader::read(std::uint64_t offset, std::byte *destination,
   if (offset >= size_ || capacity == 0)
     return 0;
   if (offset > static_cast<std::uint64_t>(std::numeric_limits<off_t>::max())) {
-    throw std::runtime_error("file offset exceeds platform limit");
+    throw FileError(FileOperation::read, path_, std::make_error_code(std::errc::value_too_large));
   }
   const auto allowed = std::min<std::uint64_t>(capacity, size_ - offset);
   const auto requested = static_cast<std::size_t>(allowed);
-  const auto count = pread(descriptor_, destination, requested, static_cast<off_t>(offset));
-  if (count < 0)
-    throw std::runtime_error(std::string("cannot read file: ") + std::strerror(errno));
-  return static_cast<std::size_t>(count);
+  for (;;) {
+    const auto count =
+        pread(descriptor_->get(), destination, requested, static_cast<off_t>(offset));
+    if (count >= 0) {
+      return static_cast<std::size_t>(count);
+    }
+    if (errno != EINTR) {
+      throw FileError(FileOperation::read, path_, captured_errno());
+    }
+  }
 }
 
 } // namespace

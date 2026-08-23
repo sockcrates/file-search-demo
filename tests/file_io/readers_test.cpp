@@ -1,3 +1,4 @@
+#include "file_io/error.h"
 #include "file_io/file_reader.h"
 #include "file_io/memory_reader.h"
 #include "test_support.h"
@@ -89,8 +90,9 @@ TEST(file_reader_reports_an_open_failure) {
   bool threw = false;
   try {
     [[maybe_unused]] find::file_io::FileReader reader(missing);
-  } catch (const std::runtime_error &) {
-    threw = true;
+  } catch (const find::file_io::FileError &error) {
+    threw = error.operation() == find::file_io::FileOperation::open && error.path() == missing &&
+            error.system_error().value() != 0;
   }
   REQUIRE(threw);
 }
@@ -99,8 +101,9 @@ TEST(file_reader_rejects_a_directory) {
   bool threw = false;
   try {
     [[maybe_unused]] find::file_io::FileReader reader(std::filesystem::temp_directory_path());
-  } catch (const std::runtime_error &) {
-    threw = true;
+  } catch (const find::file_io::FileError &error) {
+    threw = error.operation() == find::file_io::FileOperation::validate_regular_file &&
+            error.path() == std::filesystem::temp_directory_path();
   }
   REQUIRE(threw);
 }

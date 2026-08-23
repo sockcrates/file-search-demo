@@ -3,6 +3,7 @@
 #include "file_io/contiguous_reader.h"
 
 #include <filesystem>
+#include <memory>
 
 namespace find::file_io {
 
@@ -16,8 +17,8 @@ class FileReader final : public ContiguousReader {
 public:
   /**
    * @brief Open and map a stable regular file for read-only random access.
-   * @throws std::runtime_error If the file cannot be opened, inspected, mapped,
-   *         or is not regular.
+   * @throws FileError If opening, inspecting, validating, mapping, or reading
+   *         the file fails. The error identifies the operation, path, and code.
    */
   explicit FileReader(const std::filesystem::path &path);
   /** @brief Close the open file descriptor, if any. */
@@ -34,9 +35,13 @@ public:
                    std::size_t capacity) const override;
 
 private:
-  int descriptor_ = -1;
+  class FileDescriptor;
+  class Mapping;
+
+  std::unique_ptr<FileDescriptor> descriptor_;
+  std::filesystem::path path_;
   std::uint64_t size_ = 0;
-  const std::byte *mapping_ = nullptr;
+  std::unique_ptr<Mapping> mapping_;
 };
 
 } // namespace
