@@ -2,10 +2,12 @@
 
 namespace find::cli {
 
-std::expected<Arguments, std::string> parse_arguments(int argc, char **argv) {
-  if (argc != 3)
-    return std::unexpected("usage: find <search-term> <filename>");
-  return Arguments{argv[1], argv[2]};
+std::expected<Arguments, UsageError> parse_arguments(std::span<const std::string_view> arguments) {
+  constexpr std::size_t required_argument_count = 3U;
+  if (arguments.size() != required_argument_count) {
+    return std::unexpected(UsageError{UsageErrorCode::incorrect_argument_count, arguments.size()});
+  }
+  return Arguments{std::string{arguments[1]}, std::filesystem::path{arguments[2]}};
 }
 
 } // namespace
