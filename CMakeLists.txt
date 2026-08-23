@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.24)
 
 project(find_utility VERSION 1.0.0 LANGUAGES CXX)
 
+find_package(Doxygen QUIET)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -38,6 +40,15 @@ enable_strict_warnings(find)
 add_executable(find_benchmark benchmarks/search_benchmark.cpp)
 target_link_libraries(find_benchmark PRIVATE find_core)
 enable_strict_warnings(find_benchmark)
+
+if(DOXYGEN_FOUND)
+  add_custom_target(docs
+    COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/docs/Doxyfile
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/docs
+    COMMENT "Generate Doxygen API documentation"
+    VERBATIM
+  )
+endif()
 
 include(CTest)
 if(BUILD_TESTING)
