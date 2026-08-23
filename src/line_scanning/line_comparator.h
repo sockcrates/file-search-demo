@@ -3,10 +3,18 @@
 #include "file_io/reader.h"
 
 #include <compare>
+#include <cstdint>
+#include <optional>
 #include <string_view>
 #include <vector>
 
 namespace find::line_scanning {
+
+/** @brief Result of comparing a line whose end may have been observed. */
+struct LineComparison {
+  std::strong_ordering ordering;
+  std::optional<std::uint64_t> end;
+};
 
 /** @brief Compares and materializes line ranges using a bounded reusable buffer. */
 class LineComparator {
@@ -28,6 +36,15 @@ public:
    */
   [[nodiscard]] std::strong_ordering compare(std::uint64_t start, std::uint64_t end,
                                              std::string_view term) const;
+
+  /**
+   * @brief Compare the line beginning at @p start without first locating its end.
+   *
+   * The comparison stops as soon as either a differing byte or the line's
+   * newline is found. `end` is populated only when that newline was observed.
+   */
+  [[nodiscard]] LineComparison compare_from(std::uint64_t start, std::uint64_t file_size,
+                                            std::string_view term) const;
 
   /**
    * @brief Copy a line range into an owning string.

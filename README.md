@@ -50,7 +50,7 @@ Input must be sorted in unsigned ASCII byte order. A final line without a
 trailing newline is valid. Consecutive newlines represent empty lines, and a
 newline terminates the preceding line rather than belonging to it.
 
-The search performs binary search by file offset. It uses positioned, 64 KiB
+The search performs binary search by file offset. It uses bounded positioned
 reads to locate line boundaries and compare only the visited lines. Its runtime
 is logarithmic in file size plus the chunks needed to resolve those lines.
 Memory use is bounded by fixed read buffers, apart from the returned output line.
