@@ -20,13 +20,15 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
 
   while (low < high) {
     const auto midpoint = low + (high - low) / 2;
-    const auto start = scanner.line_start_containing(midpoint);
-    const auto comparison = comparator.compare_from(start, file_size, term);
-    const auto ordering = comparison.ordering;
+    const auto probe = scanner.probe_containing(midpoint, term);
+    const auto start = probe ? probe->range.start : scanner.line_start_containing(midpoint);
+    const auto comparison = probe ? std::optional<line_scanning::LineComparison>{}
+                                  : std::optional{comparator.compare_from(start, file_size, term)};
+    const auto ordering = probe ? probe->ordering : comparison->ordering;
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
-      const auto end = comparison.end.value_or(scanner.line_end(start));
+      const auto end = probe ? probe->range.end : comparison->end.value_or(scanner.line_end(start));
       const auto next = end < file_size ? end + 1 : file_size;
       if (next <= low)
         break;

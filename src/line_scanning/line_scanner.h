@@ -2,7 +2,10 @@
 
 #include "file_io/reader.h"
 
+#include <compare>
 #include <cstdint>
+#include <optional>
+#include <string_view>
 #include <vector>
 
 namespace find::line_scanning {
@@ -13,6 +16,12 @@ struct LineRange {
   std::uint64_t start;
   /** @brief Exclusive byte offset of the line, before its terminating newline. */
   std::uint64_t end; // Excludes the terminating newline.
+};
+
+/** @brief A complete line and its ordering, determined from one centered read. */
+struct LineProbe {
+  LineRange range;
+  std::strong_ordering ordering;
 };
 
 /**
@@ -46,6 +55,16 @@ public:
 
   /** @brief Return the newline-excluding range of the line containing @p offset. */
   [[nodiscard]] LineRange line_containing(std::uint64_t offset) const;
+
+  /**
+   * @brief Compare the line around @p offset when it fits in one centered buffer.
+   *
+   * Returns `std::nullopt` when either line boundary lies outside the centered
+   * buffer, so callers can fall back to directional chunk scanning. A newline
+   * position belongs to the preceding line, matching line_start_containing().
+   */
+  [[nodiscard]] std::optional<LineProbe> probe_containing(std::uint64_t offset,
+                                                          std::string_view term) const;
 
 private:
   const file_io::Reader &reader_;
