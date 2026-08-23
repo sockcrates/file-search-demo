@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 TEST(memory_reader_handles_boundaries) {
   find::file_io::MemoryReader reader("abcdef");
@@ -42,4 +43,16 @@ TEST(file_reader_reads_binary_data_without_loading_the_file) {
   REQUIRE(std::to_integer<char>(bytes[1]) == 'l');
   REQUIRE(reader.read(reader.size(), bytes.data(), bytes.size()) == 0);
   std::filesystem::remove(path);
+}
+
+TEST(file_reader_reports_an_open_failure) {
+  const auto missing = std::filesystem::temp_directory_path() / "find-no-such-file.txt";
+  std::filesystem::remove(missing);
+  bool threw = false;
+  try {
+    [[maybe_unused]] find::file_io::FileReader reader(missing);
+  } catch (const std::runtime_error &) {
+    threw = true;
+  }
+  REQUIRE(threw);
 }

@@ -11,4 +11,9 @@ TEST(cli_requires_exactly_two_arguments) {
   const auto parsed = find::cli::parse_arguments(3, valid);
   REQUIRE(parsed.has_value());
   REQUIRE(parsed->term == "apple");
+
+  char extra[] = "extra";
+  char *too_many[] = {program, term, filename, extra};
+  REQUIRE(find::cli::parse_arguments(4, too_many) ==
+          std::unexpected(std::string("usage: find <search-term> <filename>")));
 }

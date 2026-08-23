@@ -3,6 +3,8 @@
 `find <search-term> <filename>` prints the first sorted ASCII line equal to or greater than the term. It exits `0` when found, `1` when no such line exists, and `2` for usage or I/O errors.
 
 Build and test with `mise run check`; use `mise run sanitizer` for AddressSanitizer and UndefinedBehaviorSanitizer.
+Run `mise run benchmark` for repeatable short-line (beginning/middle/end and absent terms), dense duplicate,
+enormous-line, and long-common-prefix workloads; it reports elapsed time, bytes read, and random-access read count.
 
 The executable is a modular monolith. `cli` owns argument errors, `file_io` exposes the single random-access reader abstraction, `line_scanning` finds boundaries and compares incrementally, and `search` implements lower-bound binary search. The search invariant is that every line before `low` is smaller than the term and `best` is the earliest known candidate.
 
