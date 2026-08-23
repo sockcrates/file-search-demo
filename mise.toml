@@ -23,13 +23,18 @@ description = "Compile all targets with Clang warnings treated as errors"
 depends = ["build"]
 run = "cmake --build build"
 
+[tasks.tidy]
+description = "Run CppCoreGuidelines static analysis when clang-tidy is installed"
+depends = ["configure"]
+run = "clang-tidy -p build --config-file=.clang-tidy $(git ls-files '*.cpp' '*.h')"
+
 [tasks.format]
 description = "Format C++ source files with clang-format"
-run = "clang-format -i $(find src tests -name '*.cpp' -o -name '*.h')"
+run = "clang-format -i $(git ls-files '*.cpp' '*.h')"
 
 [tasks.format-check]
 description = "Check C++ source files are formatted with clang-format"
-run = "clang-format --dry-run --Werror $(find src tests -name '*.cpp' -o -name '*.h')"
+run = "clang-format --dry-run --Werror $(git ls-files '*.cpp' '*.h')"
 
 [tasks.sanitizer]
 description = "Run tests with address and undefined behaviour sanitizers"
