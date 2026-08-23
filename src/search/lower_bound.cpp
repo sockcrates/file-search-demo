@@ -16,29 +16,32 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
   std::uint64_t low = 0;
   std::uint64_t high = file_size;
   // best is the earliest candidate encountered so far.
-  std::optional<line_scanning::LineRange> best;
+  std::optional<std::uint64_t> best_start;
 
   while (low < high) {
     const auto midpoint = low + (high - low) / 2;
-    const auto line = scanner.line_containing(midpoint);
-    const auto ordering = comparator.compare(line.start, line.end, term);
+    const auto start = scanner.line_start_containing(midpoint);
+    const auto comparison = comparator.compare_from(start, file_size, term);
+    const auto ordering = comparison.ordering;
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
-      const auto next = line.end < file_size ? line.end + 1 : file_size;
+      const auto end = comparison.end.value_or(scanner.line_end(start));
+      const auto next = end < file_size ? end + 1 : file_size;
       if (next <= low)
         break;
       low = next;
     } else {
-      best = line;
-      if (line.start >= high)
+      best_start = start;
+      if (start >= high)
         break;
-      high = line.start;
+      high = start;
     }
   }
-  if (!best)
+  if (!best_start)
     return std::nullopt;
-  return comparator.read_line(best->start, best->end);
+  const auto end = scanner.line_end(*best_start);
+  return comparator.read_line(*best_start, end);
 }
 
 } // namespace

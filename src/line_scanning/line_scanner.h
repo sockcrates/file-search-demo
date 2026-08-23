@@ -28,7 +28,7 @@ public:
    * @param buffer_size Size, in bytes, of the read buffer; must be non-zero.
    * @throws std::invalid_argument If @p buffer_size is zero.
    */
-  explicit LineScanner(const file_io::Reader &reader, std::size_t buffer_size = 64U * 1024U);
+  explicit LineScanner(const file_io::Reader &reader, std::size_t buffer_size = 4U * 1024U);
 
   /**
    * @brief Find the first byte of the line containing @p offset.
