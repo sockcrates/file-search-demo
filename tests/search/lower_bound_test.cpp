@@ -103,3 +103,18 @@ TEST(lower_bound_reads_a_sublinear_number_of_chunks_for_many_short_lines) {
   REQUIRE(reader.read_calls < 100);
   REQUIRE(reader.bytes_read < 2U * 1024U * 1024U);
 }
+
+TEST(lower_bound_reuses_a_centered_probe_for_a_short_midpoint_line) {
+  constexpr std::size_t line_count = 100000;
+  std::string input;
+  input.reserve(line_count * 8);
+  for (std::size_t index = 0; index < line_count; ++index) {
+    const auto number = std::to_string(index);
+    input += "a" + std::string(6 - number.size(), '0') + number + '\n';
+  }
+  find::file_io::MemoryReader backing(input.c_str());
+  CountingReader reader(backing);
+
+  REQUIRE(find::search::lower_bound(reader, "a050000") == "a050000");
+  REQUIRE(reader.read_calls == 1);
+}
