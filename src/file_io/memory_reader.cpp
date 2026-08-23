@@ -16,6 +16,8 @@ MemoryReader::MemoryReader(const char *text) {
 
 std::uint64_t MemoryReader::size() const { return static_cast<std::uint64_t>(bytes_.size()); }
 
+std::span<const std::byte> MemoryReader::bytes() const { return bytes_; }
+
 std::size_t MemoryReader::read(std::uint64_t offset, std::byte *destination,
                                std::size_t capacity) const {
   if (offset >= size() || capacity == 0)
