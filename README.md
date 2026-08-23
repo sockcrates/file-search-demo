@@ -1,8 +1,8 @@
 # find
 
 `find` performs a lower-bound search over a sorted, newline-delimited ASCII file.
-It prints the first line equal to or greater than a search term without loading
-the whole file into memory.
+It prints the first line equal to or greater than a search term without copying
+the whole file into application-managed memory.
 
 ## Usage
 
@@ -50,10 +50,12 @@ Input must be sorted in unsigned ASCII byte order. A final line without a
 trailing newline is valid. Consecutive newlines represent empty lines, and a
 newline terminates the preceding line rather than belonging to it.
 
-The search performs binary search by file offset. It uses bounded positioned
-reads to locate line boundaries and compare only the visited lines. Its runtime
-is logarithmic in file size plus the chunks needed to resolve those lines.
-Memory use is bounded by fixed read buffers, apart from the returned output line.
+The search performs binary search by file offset. Regular files use a read-only
+memory mapping and compare only the visited lines; generic readers use bounded
+positioned reads. Its runtime is logarithmic in file size plus the chunks needed
+to resolve those lines. Mapped input must remain stable while the search runs;
+concurrent truncation is unsupported. Generic-reader memory use is bounded by
+fixed read buffers, apart from the returned output line.
 
 ## Architecture
 

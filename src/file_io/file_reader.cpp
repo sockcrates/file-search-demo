@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -31,15 +32,42 @@ FileReader::FileReader(const std::filesystem::path &path) {
   }
   if (details.st_size < 0)
     throw std::runtime_error("file has a negative size");
+  if (!S_ISREG(details.st_mode)) {
+    close(descriptor_);
+    descriptor_ = -1;
+    throw std::runtime_error("file is not a regular file");
+  }
   size_ = static_cast<std::uint64_t>(details.st_size);
+  if (size_ > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
+    close(descriptor_);
+    descriptor_ = -1;
+    throw std::runtime_error("file size exceeds platform limit");
+  }
+  if (size_ != 0) {
+    const auto mapped =
+        mmap(nullptr, static_cast<std::size_t>(size_), PROT_READ, MAP_PRIVATE, descriptor_, 0);
+    if (mapped == MAP_FAILED) {
+      const auto error = system_error("cannot map", path);
+      close(descriptor_);
+      descriptor_ = -1;
+      throw error;
+    }
+    mapping_ = static_cast<const std::byte *>(mapped);
+  }
 }
 
 FileReader::~FileReader() {
+  if (mapping_ != nullptr)
+    munmap(const_cast<std::byte *>(mapping_), static_cast<std::size_t>(size_));
   if (descriptor_ != -1)
     close(descriptor_);
 }
 
 std::uint64_t FileReader::size() const { return size_; }
+
+std::span<const std::byte> FileReader::bytes() const {
+  return {mapping_, static_cast<std::size_t>(size_)};
+}
 
 std::size_t FileReader::read(std::uint64_t offset, std::byte *destination,
                              std::size_t capacity) const {

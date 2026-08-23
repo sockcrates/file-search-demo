@@ -1,8 +1,12 @@
+#include "file_io/contiguous_reader.h"
+#include "file_io/file_reader.h"
 #include "file_io/memory_reader.h"
 #include "file_io/reader.h"
 #include "search/lower_bound.h"
 #include "test_support.h"
 
+#include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -31,6 +35,20 @@ public:
 
 private:
   const find::file_io::Reader &reader_;
+};
+
+class NoReadContiguousReader final : public find::file_io::ContiguousReader {
+public:
+  explicit NoReadContiguousReader(const char *input) : backing_(input) {}
+
+  [[nodiscard]] std::uint64_t size() const override { return backing_.size(); }
+  [[nodiscard]] std::span<const std::byte> bytes() const override { return backing_.bytes(); }
+  std::size_t read(std::uint64_t, std::byte *, std::size_t) const override {
+    throw std::runtime_error("direct path must not read");
+  }
+
+private:
+  find::file_io::MemoryReader backing_;
 };
 } // namespace
 
@@ -117,4 +135,27 @@ TEST(lower_bound_reuses_a_centered_probe_for_a_short_midpoint_line) {
 
   REQUIRE(find::search::lower_bound(reader, "a050000") == "a050000");
   REQUIRE(reader.read_calls == 1);
+}
+
+TEST(lower_bound_uses_a_contiguous_reader_without_copy_reads) {
+  NoReadContiguousReader reader("apple\napricot\navocado\nbanana");
+  REQUIRE(find::search::lower_bound(reader, "apri") == "apricot");
+}
+
+TEST(lower_bound_contiguous_path_matches_generic_reader_at_boundaries) {
+  find::file_io::MemoryReader direct("\n\napple\napple\nbanana");
+  CountingReader generic(direct);
+  for (const auto term : {"", "apple", "apz", "banana", "z"})
+    REQUIRE(find::search::lower_bound(direct, term) == find::search::lower_bound(generic, term));
+}
+
+TEST(lower_bound_searches_a_mapped_file) {
+  const auto path = std::filesystem::temp_directory_path() / "find-mapped-search-test.txt";
+  {
+    std::ofstream output(path, std::ios::binary);
+    output << "apple\napricot\navocado\nbanana";
+  }
+  find::file_io::FileReader reader(path);
+  REQUIRE(find::search::lower_bound(reader, "apri") == "apricot");
+  std::filesystem::remove(path);
 }
