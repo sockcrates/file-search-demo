@@ -18,9 +18,9 @@ namespace find::search {
  * @param reader Random-access source containing sorted lines.
  * @param term Search term to use as the lower bound.
  * @return The first line not less than @p term, or `std::nullopt` when none exists.
- * @complexity Logarithmic in file size plus the chunks needed to locate and
- *             compare the visited lines; fixed-buffer memory apart from the
- *             returned line.
+ * @complexity Logarithmic in file size plus the bytes needed to resolve visited
+ *             lines. Generic readers use fixed buffers; contiguous readers use
+ *             no additional search buffer apart from the returned line.
  */
 [[nodiscard]] std::optional<std::string> lower_bound(const file_io::Reader &reader,
                                                      std::string_view term);

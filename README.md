@@ -60,7 +60,8 @@ fixed read buffers, apart from the returned output line.
 ## Architecture
 
 - `cli` parses command-line arguments and owns usage errors.
-- `file_io` provides the `Reader` random-access abstraction and file/memory implementations.
+- `file_io` provides the `Reader` abstraction, optional contiguous views, and file/memory
+  implementations.
 - `line_scanning` locates line ranges and compares or materializes them incrementally.
 - `search` implements the lower-bound binary search.
 
