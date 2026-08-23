@@ -1,32 +1,9 @@
-# find-exercise
+# find
 
-A C++23 project built with CMake and LLVM Clang, managed through [mise](https://mise.jdx.dev/).
+`find <search-term> <filename>` prints the first sorted ASCII line equal to or greater than the term. It exits `0` when found, `1` when no such line exists, and `2` for usage or I/O errors.
 
-## Getting started
+Build and test with `mise run check`; use `mise run sanitizer` for AddressSanitizer and UndefinedBehaviorSanitizer.
 
-```sh
-mise install
-mise run build
-mise run test
-mise run lint
-mise run format-check
-```
+The executable is a modular monolith. `cli` owns argument errors, `file_io` exposes the single random-access reader abstraction, `line_scanning` finds boundaries and compares incrementally, and `search` implements lower-bound binary search. The search invariant is that every line before `low` is smaller than the term and `best` is the earliest known candidate.
 
-`mise.toml` pins Clang/LLVM 21 and CMake 4. The build configuration explicitly selects `clang++` and produces `build/compile_commands.json` for editor tooling.
-
-## Tasks
-
-```sh
-mise run configure
-mise run build
-mise run test
-mise run lint
-mise run format       # rewrite files using clang-format
-mise run format-check # fail if formatting is needed
-mise run check        # format-check, lint, and test
-mise run clean
-```
-
-`lint` compiles every target with Clang's warnings enabled and treated as errors.
-Formatting is defined in `.clang-format` and applied by the pinned `clang-format`
-tool.
+Reads are chunked (64 KiB) and positioned, so no whole file or whole candidate line is loaded during searching. A final line without a newline is a valid line; newlines terminate the preceding line and consecutive newlines represent empty lines. Runtime is logarithmic in file size plus the chunks needed to resolve and compare visited lines; memory use is bounded by fixed read buffers, aside from the returned output line.

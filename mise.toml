@@ -25,11 +25,15 @@ run = "cmake --build build"
 
 [tasks.format]
 description = "Format C++ source files with clang-format"
-run = "clang-format -i src/main.cpp src/file_read.cpp"
+run = "clang-format -i $(find src tests -name '*.cpp' -o -name '*.h')"
 
 [tasks.format-check]
 description = "Check C++ source files are formatted with clang-format"
-run = "clang-format --dry-run --Werror src/main.cpp src/file_read.cpp"
+run = "clang-format --dry-run --Werror $(find src tests -name '*.cpp' -o -name '*.h')"
+
+[tasks.sanitizer]
+description = "Run tests with address and undefined behaviour sanitizers"
+run = "cmake -S . -B build-sanitize -DCMAKE_CXX_COMPILER=clang++ -DENABLE_SANITIZERS=ON && cmake --build build-sanitize && ctest --test-dir build-sanitize --output-on-failure"
 
 [tasks.check]
 description = "Run formatting, lint, and tests"
