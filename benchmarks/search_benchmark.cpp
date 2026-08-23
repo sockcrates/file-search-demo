@@ -18,7 +18,8 @@ class CountingReader final : public find::file_io::Reader {
 public:
   explicit CountingReader(const find::file_io::Reader &reader) : reader_(reader) {}
   [[nodiscard]] std::uint64_t size() const override { return reader_.size(); }
-  std::size_t read(std::uint64_t offset, std::byte *destination, std::size_t capacity) const override {
+  std::size_t read(std::uint64_t offset, std::byte *destination,
+                   std::size_t capacity) const override {
     ++calls;
     const auto count = reader_.read(offset, destination, capacity);
     bytes += count;
@@ -106,8 +107,8 @@ int main() {
     duplicates += "duplicate\n";
   run("many identical lines", duplicates, "duplicate");
 
-  const std::string prefixes = std::string(4U * 1024U * 1024U, 'a') + "b\n" +
-                               std::string(4U * 1024U * 1024U, 'a') + "c\n";
+  const std::string prefixes =
+      std::string(4U * 1024U * 1024U, 'a') + "b\n" + std::string(4U * 1024U * 1024U, 'a') + "c\n";
   run("enormous common prefixes", prefixes, std::string(4U * 1024U * 1024U, 'a') + "b");
   run_mapped("mapped enormous common prefixes", prefixes,
              std::string(4U * 1024U * 1024U, 'a') + "b");
