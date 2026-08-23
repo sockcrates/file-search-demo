@@ -1,0 +1,40 @@
+[tools]
+clang = "21"
+clangd = "21"
+clang-format = "21"
+cmake = "4"
+
+[tasks.configure]
+description = "Configure the CMake build with LLVM Clang"
+run = "cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+
+[tasks.build]
+description = "Build the project"
+depends = ["configure"]
+run = "cmake --build build"
+
+[tasks.test]
+description = "Build and run the test suite"
+depends = ["build"]
+run = "ctest --test-dir build --output-on-failure"
+
+[tasks.lint]
+description = "Compile all targets with Clang warnings treated as errors"
+depends = ["build"]
+run = "cmake --build build"
+
+[tasks.format]
+description = "Format C++ source files with clang-format"
+run = "clang-format -i src/main.cpp src/file_read.cpp"
+
+[tasks.format-check]
+description = "Check C++ source files are formatted with clang-format"
+run = "clang-format --dry-run --Werror src/main.cpp src/file_read.cpp"
+
+[tasks.check]
+description = "Run formatting, lint, and tests"
+depends = ["format-check", "lint", "test"]
+
+[tasks.clean]
+description = "Remove generated build artifacts"
+run = "cmake -E rm -rf build"
