@@ -1,6 +1,7 @@
 #include "line_scanning/line_scanner.h"
 
 #include <algorithm>
+#include <cstring>
 #include <stdexcept>
 
 namespace find::line_scanning {
@@ -39,10 +40,10 @@ std::uint64_t LineScanner::line_end(std::uint64_t start) const {
     const auto count = reader_.read(position, buffer_.data(), buffer_.size());
     if (count == 0)
       break;
-    for (std::size_t index = 0; index < count; ++index) {
-      if (buffer_[index] == newline)
-        return position + index;
-    }
+    const auto *newline_position =
+        static_cast<const std::byte *>(std::memchr(buffer_.data(), static_cast<int>('\n'), count));
+    if (newline_position != nullptr)
+      return position + static_cast<std::uint64_t>(newline_position - buffer_.data());
     position += count;
   }
   return file_size;

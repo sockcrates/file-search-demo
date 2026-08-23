@@ -22,6 +22,8 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
     const auto midpoint = low + (high - low) / 2;
     const auto line = scanner.line_containing(midpoint);
     const auto ordering = comparator.compare(line.start, line.end, term);
+    if (ordering == std::strong_ordering::equal)
+      return std::string(term);
     if (ordering == std::strong_ordering::less) {
       const auto next = line.end < file_size ? line.end + 1 : file_size;
       if (next <= low)
