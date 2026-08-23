@@ -15,8 +15,9 @@ namespace find::file_io {
 class FileReader final : public ContiguousReader {
 public:
   /**
-   * @brief Open @p path for read-only random access.
-   * @throws std::runtime_error If the file cannot be opened or inspected.
+   * @brief Open and map a stable regular file for read-only random access.
+   * @throws std::runtime_error If the file cannot be opened, inspected, mapped,
+   *         or is not regular.
    */
   explicit FileReader(const std::filesystem::path &path);
   /** @brief Close the open file descriptor, if any. */
