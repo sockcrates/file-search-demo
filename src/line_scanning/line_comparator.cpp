@@ -1,6 +1,7 @@
 #include "line_scanning/line_comparator.h"
 
 #include <algorithm>
+#include <cstring>
 #include <stdexcept>
 
 namespace find::line_scanning {
@@ -16,18 +17,18 @@ std::strong_ordering LineComparator::compare(std::uint64_t start, std::uint64_t 
   auto offset = start;
   std::size_t term_offset = 0;
   while (offset < end && term_offset < term.size()) {
-    const auto count =
-        reader_.read(offset, buffer_.data(), std::min<std::uint64_t>(buffer_.size(), end - offset));
-    for (std::size_t index = 0; index < count && term_offset < term.size();
-         ++index, ++term_offset) {
-      const auto candidate = static_cast<unsigned char>(buffer_[index]);
-      const auto target = static_cast<unsigned char>(term[term_offset]);
-      if (candidate < target)
-        return std::strong_ordering::less;
-      if (candidate > target)
-        return std::strong_ordering::greater;
-    }
+    const auto count = reader_.read(
+        offset, buffer_.data(),
+        std::min<std::uint64_t>(
+            buffer_.size(),
+            std::min(end - offset, static_cast<std::uint64_t>(term.size() - term_offset))));
+    const auto comparison = std::memcmp(buffer_.data(), term.data() + term_offset, count);
+    if (comparison < 0)
+      return std::strong_ordering::less;
+    if (comparison > 0)
+      return std::strong_ordering::greater;
     offset += count;
+    term_offset += count;
   }
   if (offset < end)
     return std::strong_ordering::greater;
