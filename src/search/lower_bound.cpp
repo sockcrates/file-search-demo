@@ -4,8 +4,48 @@
 #include "line_scanning/line_comparator.h"
 #include "line_scanning/line_scanner.h"
 
+#include <algorithm>
+#include <cstring>
+
 namespace find::search {
 namespace {
+
+struct ContiguousComparison {
+  std::strong_ordering ordering;
+  std::optional<std::size_t> end;
+};
+
+ContiguousComparison compare_contiguous_line(const char *data, std::size_t size, std::size_t start,
+                                             std::string_view term) {
+  auto offset = start;
+  std::size_t term_offset = 0;
+  while (offset < size) {
+    const auto term_remaining = term.size() - term_offset;
+    const auto capacity = std::min(size - offset, term_remaining + 1);
+    const auto *newline = static_cast<const char *>(std::memchr(data + offset, '\n', capacity));
+    const auto content_size =
+        newline == nullptr ? capacity : static_cast<std::size_t>(newline - (data + offset));
+    const auto common_size = std::min(content_size, term_remaining);
+    if (common_size != 0) {
+      const auto comparison = std::memcmp(data + offset, term.data() + term_offset, common_size);
+      if (comparison < 0)
+        return {std::strong_ordering::less, std::nullopt};
+      if (comparison > 0)
+        return {std::strong_ordering::greater, std::nullopt};
+    }
+    offset += common_size;
+    term_offset += common_size;
+    if (common_size < content_size)
+      return {std::strong_ordering::greater, std::nullopt};
+    if (newline != nullptr)
+      return {term_offset == term.size() ? std::strong_ordering::equal : std::strong_ordering::less,
+              offset};
+    if (term_offset == term.size() && offset == size)
+      return {std::strong_ordering::equal, std::nullopt};
+  }
+  return {term_offset == term.size() ? std::strong_ordering::equal : std::strong_ordering::less,
+          std::nullopt};
+}
 
 std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> bytes,
                                                   std::string_view term) {
@@ -23,15 +63,19 @@ std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> byt
     auto start = midpoint;
     while (start != 0 && data[start - 1] != '\n')
       --start;
-    auto end = start;
-    while (end < size && data[end] != '\n')
-      ++end;
-    const std::string_view line(data + start, end - start);
-    const auto ordering = line <=> term;
+    const auto comparison = compare_contiguous_line(data, size, start, term);
+    const auto ordering = comparison.ordering;
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
-      low = end < size ? end + 1 : size;
+      auto end = comparison.end;
+      if (!end) {
+        auto line_end = start;
+        while (line_end < size && data[line_end] != '\n')
+          ++line_end;
+        end = line_end;
+      }
+      low = *end < size ? *end + 1 : size;
     } else {
       best_start = start;
       high = start;
