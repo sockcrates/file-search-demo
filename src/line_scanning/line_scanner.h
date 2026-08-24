@@ -16,17 +16,17 @@ inline constexpr std::size_t default_scanner_buffer_size = 4096U;
 /** @brief Half-open byte range occupied by a line, excluding its newline. */
 struct LineRange {
   /** @brief Inclusive byte offset of the first character in the line. */
-  std::uint64_t start;
+  std::uint64_t start = 0;
   /** @brief Exclusive byte offset of the line, before its terminating newline. */
-  std::uint64_t end; // Excludes the terminating newline.
+  std::uint64_t end = 0; // Excludes the terminating newline.
 };
 
 /** @brief A complete line and its ordering, determined from one centered read. */
 struct LineProbe {
   /** @brief Newline-excluding byte range of the probed line. */
-  LineRange range;
+  LineRange range{};
   /** @brief Unsigned-byte ordering of `range` relative to the search term. */
-  std::strong_ordering ordering;
+  std::strong_ordering ordering = std::strong_ordering::equal;
 };
 
 /**

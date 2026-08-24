@@ -39,9 +39,9 @@ enum class UsageErrorCode : std::uint8_t {
  */
 struct UsageError {
   /** @brief Specific invalid-command-line condition. */
-  UsageErrorCode code;
+  UsageErrorCode code = UsageErrorCode::incorrect_argument_count;
   /** @brief Number of entries supplied, including the executable name. */
-  std::size_t argument_count;
+  std::size_t argument_count = 0;
 
   /** @brief Compare usage failures by code and supplied argument count. */
   [[nodiscard]] friend bool operator==(const UsageError &, const UsageError &) = default;

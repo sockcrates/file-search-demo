@@ -16,7 +16,7 @@ inline constexpr std::size_t default_comparator_buffer_size = 65536U;
 /** @brief Result of comparing a line whose end may have been observed. */
 struct LineComparison {
   /** @brief Unsigned-byte ordering of the observed line prefix relative to the search term. */
-  std::strong_ordering ordering;
+  std::strong_ordering ordering = std::strong_ordering::equal;
   /** @brief Newline offset when the complete line ended in the scanned data. */
   std::optional<std::uint64_t> end;
 };
