@@ -3,6 +3,7 @@
 #include "file_io/contiguous_reader.h"
 
 #include <span>
+#include <string_view>
 #include <vector>
 
 namespace find::file_io {
@@ -12,8 +13,13 @@ class MemoryReader final : public ContiguousReader {
 public:
   /** @brief Copy @p bytes into a read-only random-access buffer. */
   explicit MemoryReader(std::span<const std::byte> bytes);
-  /** @brief Copy the null-terminated string at @p text into the buffer. */
-  explicit MemoryReader(const char *text);
+  /**
+   * @brief Copy the explicitly sized text bytes into the buffer.
+   *
+   * Unlike a C-string interface, this constructor is binary-safe and cannot
+   * dereference a null pointer while determining the input length.
+   */
+  explicit MemoryReader(std::string_view text);
   /** @copydoc Reader::size */
   [[nodiscard]] std::uint64_t size() const override;
   /** @copydoc ContiguousReader::bytes */

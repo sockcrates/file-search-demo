@@ -1,18 +1,14 @@
 #include "file_io/memory_reader.h"
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
 
 namespace find::file_io {
 
 MemoryReader::MemoryReader(std::span<const std::byte> bytes) : bytes_(bytes.begin(), bytes.end()) {}
 
-MemoryReader::MemoryReader(const char *text) {
-  const auto length = std::strlen(text);
-  bytes_.resize(length);
-  std::memcpy(bytes_.data(), text, length);
-}
+MemoryReader::MemoryReader(std::string_view text)
+    : MemoryReader(std::as_bytes(std::span{text.data(), text.size()})) {}
 
 std::uint64_t MemoryReader::size() const { return static_cast<std::uint64_t>(bytes_.size()); }
 
