@@ -1,5 +1,6 @@
 /.cache/
 /build/
+/build-benchmark/
 /build-sanitize/
 /compile_commands.json
 .mise.local.toml
