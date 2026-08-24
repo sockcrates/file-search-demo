@@ -70,8 +70,14 @@ endfunction()
 
 if(ENABLE_CLANG_TIDY)
   find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy REQUIRED)
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-resource-dir
+    OUTPUT_VARIABLE CLANG_RESOURCE_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
+  )
   set(CMAKE_CXX_CLANG_TIDY
-      "${CLANG_TIDY_EXECUTABLE};--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy")
+      "${CLANG_TIDY_EXECUTABLE};--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy;--extra-arg=-resource-dir=${CLANG_RESOURCE_DIR}")
 endif()
 
 enable_strict_warnings(find_core)

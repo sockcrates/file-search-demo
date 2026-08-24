@@ -16,7 +16,7 @@ cmake = "4.0.1"
 
 [tasks.configure]
 description = "Configure the CMake build with LLVM Clang"
-run = "cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+run = "cmake -S . -B build -DCMAKE_CXX_COMPILER=\"$(mise which clang++)\" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
 
 [tasks.build]
 description = "Build the project"
@@ -48,12 +48,11 @@ run = "clang-format --dry-run --Werror $(git ls-files '*.cpp' '*.h')"
 
 [tasks.sanitizer]
 description = "Run tests with address and undefined behaviour sanitizers"
-run = "cmake -S . -B build-sanitize -DCMAKE_CXX_COMPILER=clang++ -DENABLE_SANITIZERS=ON && cmake --build build-sanitize && ctest --test-dir build-sanitize --output-on-failure"
+run = "cmake -S . -B build-sanitize -DCMAKE_CXX_COMPILER=\"$(mise which clang++)\" -DENABLE_SANITIZERS=ON && cmake --build build-sanitize && ctest --test-dir build-sanitize --output-on-failure"
 
 [tasks.benchmark]
 description = "Run repeatable in-memory search workloads and report elapsed time and read volume"
-depends = ["build"]
-run = "./build/find_benchmark"
+run = "cmake -S . -B build-benchmark -DCMAKE_CXX_COMPILER=\"$(mise which clang++)\" && cmake --build build-benchmark --target find_benchmark && ./build-benchmark/find_benchmark"
 
 [tasks.check]
 description = "Run the required formatting, Core Guidelines, build, and test gate"
