@@ -1,4 +1,8 @@
+# Repository policy: the C++ Core Guidelines are mandatory. See
+# docs/cpp-core-guidelines.md for scope and the narrow exception process.
 ---
+# `cppcoreguidelines-*` is the mandatory baseline; all following families are
+# supplemental hardening checks and every enabled diagnostic is an error.
 Checks: >
   -*,
   bugprone-*,
@@ -10,10 +14,15 @@ Checks: >
   portability-*,
   readability-*
 WarningsAsErrors: '*'
-HeaderFilterRegex: '(^|.*/)src/.*'
+# Analyze all first-party headers, including test and benchmark support code.
+HeaderFilterRegex: '(^|.*/)(src|tests|benchmarks)/.*'
 CheckOptions:
+  # POSIX byte-processing needs runtime-dependent indexes; std::span bounds
+  # remain mandatory (CG-001, bounds-safety at the ABI boundary).
   - key: cppcoreguidelines-pro-bounds-constant-array-index
     value: 'false'
+  # Conventional file, exit-status, and buffer constants are named at their
+  # declarations; this whitelist avoids duplicate diagnostics (CG-002).
   - key: cppcoreguidelines-avoid-magic-numbers.IgnoredIntegerValues
     value: '0;1;2;3;4;8;16;32;64;512;1024;4096;65536'
   - key: readability-identifier-length.MinimumVariableNameLength

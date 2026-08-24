@@ -7,10 +7,11 @@ find_package(Doxygen QUIET)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(ENABLE_HARDENING "Enable supported compiler and linker hardening" ON)
 option(ENABLE_SANITIZERS "Enable address and undefined behaviour sanitizers" OFF)
-option(ENABLE_CLANG_TIDY "Run clang-tidy when it is available" ON)
+option(ENABLE_CLANG_TIDY "Require clang-tidy and enforce the repository static-analysis policy" ON)
 
 add_library(find_core
   src/cli/arguments.cpp
@@ -68,12 +69,9 @@ function(enable_hardening target)
 endfunction()
 
 if(ENABLE_CLANG_TIDY)
-  find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy)
-  if(CLANG_TIDY_EXECUTABLE)
-    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXECUTABLE};--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy")
-  else()
-    message(STATUS "clang-tidy was not found; static analysis is disabled")
-  endif()
+  find_program(CLANG_TIDY_EXECUTABLE NAMES clang-tidy REQUIRED)
+  set(CMAKE_CXX_CLANG_TIDY
+      "${CLANG_TIDY_EXECUTABLE};--config-file=${CMAKE_CURRENT_SOURCE_DIR}/.clang-tidy")
 endif()
 
 enable_strict_warnings(find_core)

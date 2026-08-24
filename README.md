@@ -28,10 +28,16 @@ Exit codes are:
 ## Requirements and development
 
 The project uses C++23, CMake, and a Clang toolchain. [mise](https://mise.jdx.dev/)
-can provision the pinned developer tools.
+installs the pinned LLVM 21 tools, including `clang`, `clang-format`, `clangd`,
+and the required `clang-tidy` analyzer. Run `mise install` after cloning or
+when the mise configuration changes.
+
+All first-party C++ code must comply with the [C++ Core Guidelines policy](docs/cpp-core-guidelines.md).
 
 ```console
-$ mise run check       # Format check, strict compilation, and tests
+$ mise install
+$ mise run tidy        # Mandatory C++ Core Guidelines analysis
+$ mise run check       # Format, Core Guidelines, strict compilation, and tests
 $ mise run sanitizer   # AddressSanitizer and UndefinedBehaviorSanitizer
 $ mise run benchmark   # Search workloads and I/O metrics
 ```
