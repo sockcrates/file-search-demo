@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_FILE_IO_FILE_READER_H
+#define FIND_FILE_IO_FILE_READER_H
 
 #include "file_io/contiguous_reader.h"
 
@@ -28,6 +29,10 @@ public:
   FileReader(const FileReader &) = delete;
   /** @brief Copy assignment of a resource-owning mapped reader is not supported. */
   FileReader &operator=(const FileReader &) = delete;
+  /** @brief Move a resource-owning mapped reader. */
+  FileReader(FileReader &&) noexcept;
+  /** @brief Transfer ownership of a mapped reader's resources. */
+  FileReader &operator=(FileReader &&) noexcept;
 
   /** @copydoc Reader::size */
   [[nodiscard]] std::uint64_t size() const override;
@@ -48,3 +53,5 @@ private:
 
 } // namespace
   // find::file_io
+
+#endif // FIND_FILE_IO_FILE_READER_H

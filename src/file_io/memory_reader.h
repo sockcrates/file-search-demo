@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_FILE_IO_MEMORY_READER_H
+#define FIND_FILE_IO_MEMORY_READER_H
 
 #include "file_io/contiguous_reader.h"
 
@@ -37,3 +38,5 @@ private:
 
 } // namespace
   // find::file_io
+
+#endif // FIND_FILE_IO_MEMORY_READER_H

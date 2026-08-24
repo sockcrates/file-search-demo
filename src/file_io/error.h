@@ -1,5 +1,7 @@
-#pragma once
+#ifndef FIND_FILE_IO_ERROR_H
+#define FIND_FILE_IO_ERROR_H
 
+#include <cstdint>
 #include <filesystem>
 #include <stdexcept>
 #include <system_error>
@@ -7,7 +9,7 @@
 namespace find::file_io {
 
 /** @brief POSIX file operation that failed while constructing or reading a FileReader. */
-enum class FileOperation {
+enum class FileOperation : std::uint8_t {
   /** @brief Opening the requested path failed. */
   open,
   /** @brief Inspecting the opened file descriptor failed. */
@@ -53,3 +55,5 @@ private:
 };
 
 } // namespace find::file_io
+
+#endif // FIND_FILE_IO_ERROR_H

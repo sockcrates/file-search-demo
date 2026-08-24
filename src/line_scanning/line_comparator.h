@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_LINE_SCANNING_LINE_COMPARATOR_H
+#define FIND_LINE_SCANNING_LINE_COMPARATOR_H
 
 #include "file_io/reader.h"
 
@@ -9,6 +10,8 @@
 #include <vector>
 
 namespace find::line_scanning {
+
+inline constexpr std::size_t default_comparator_buffer_size = 65536U;
 
 /** @brief Result of comparing a line whose end may have been observed. */
 struct LineComparison {
@@ -27,7 +30,8 @@ public:
    * @param buffer_size Size, in bytes, of the read buffer; must be non-zero.
    * @throws std::invalid_argument If @p buffer_size is zero.
    */
-  explicit LineComparator(const file_io::Reader &reader, std::size_t buffer_size = 64U * 1024U);
+  explicit LineComparator(const file_io::Reader &reader,
+                          std::size_t buffer_size = default_comparator_buffer_size);
 
   /**
    * @brief Compare a line range with a search term using unsigned ASCII bytes.
@@ -64,9 +68,12 @@ public:
   [[nodiscard]] std::string read_line(std::uint64_t start, std::uint64_t end) const;
 
 private:
-  const file_io::Reader &reader_;
+  const file_io::Reader &reader_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members):
+                                  // non-null borrowed reader
   mutable std::vector<std::byte> buffer_;
 };
 
 } // namespace
   // find::line_scanning
+
+#endif // FIND_LINE_SCANNING_LINE_COMPARATOR_H

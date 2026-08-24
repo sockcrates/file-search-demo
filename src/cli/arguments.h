@@ -1,5 +1,7 @@
-#pragma once
+#ifndef FIND_CLI_ARGUMENTS_H
+#define FIND_CLI_ARGUMENTS_H
 
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <span>
@@ -22,7 +24,7 @@ struct Arguments {
 };
 
 /** @brief Classifies a command-line parsing failure. */
-enum class UsageErrorCode {
+enum class UsageErrorCode : std::uint8_t {
   /** @brief The invocation did not contain exactly a term and file path. */
   incorrect_argument_count,
   /** @brief An argument entry required by the invocation was null. */
@@ -60,3 +62,5 @@ parse_arguments(std::span<const std::string_view> arguments);
 
 } // namespace
   // find::cli
+
+#endif // FIND_CLI_ARGUMENTS_H

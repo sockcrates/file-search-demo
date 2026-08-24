@@ -34,9 +34,9 @@ depends = ["build"]
 run = "cmake --build build"
 
 [tasks.tidy]
-description = "Enforce the mandatory C++ Core Guidelines policy with clang-tidy"
+description = "Enforce the mandatory C++ Core Guidelines policy during a clean CMake build"
 depends = ["configure"]
-run = "clang-tidy -p build --config-file=.clang-tidy $(git ls-files '*.cpp' '*.h')"
+run = "cmake --build build --clean-first --parallel 8"
 
 [tasks.format]
 description = "Format C++ source files with clang-format"
