@@ -1,8 +1,12 @@
+[plugins]
+clang-tidy = "https://github.com/mise-plugins/mise-llvm.git"
+
 [tools]
-clang = "21"
-clangd = "21"
-clang-format = "21"
-cmake = "4"
+clang = "21.1.8"
+clangd = "21.1.8"
+clang-format = "21.1.8"
+clang-tidy = "21.1.8"
+cmake = "4.0.1"
 
 [tasks.configure]
 description = "Configure the CMake build with LLVM Clang"
@@ -24,7 +28,7 @@ depends = ["build"]
 run = "cmake --build build"
 
 [tasks.tidy]
-description = "Run CppCoreGuidelines static analysis when clang-tidy is installed"
+description = "Enforce the mandatory C++ Core Guidelines policy with clang-tidy"
 depends = ["configure"]
 run = "clang-tidy -p build --config-file=.clang-tidy $(git ls-files '*.cpp' '*.h')"
 
@@ -46,8 +50,8 @@ depends = ["build"]
 run = "./build/find_benchmark"
 
 [tasks.check]
-description = "Run formatting, lint, and tests"
-depends = ["format-check", "lint", "test"]
+description = "Run the required formatting, Core Guidelines, build, and test gate"
+depends = ["format-check", "tidy", "lint", "test"]
 
 [tasks.clean]
 description = "Remove generated build artifacts"

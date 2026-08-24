@@ -8,6 +8,10 @@ backend = "asdf:clang"
 version = "21.1.8"
 backend = "asdf:clang-format"
 
+[[tools.clang-tidy]]
+version = "21.1.8"
+backend = "asdf:https://github.com/mise-plugins/mise-llvm.git"
+
 [[tools.clangd]]
 version = "21.1.8"
 backend = "asdf:clangd"
