@@ -20,12 +20,12 @@ Use this shape for public functions:
  */
 ```
 
-Document public types, constructors, public functions, and externally meaningful
-destructors. Prefer `@copydoc` for overrides whose contract is unchanged. Do not
-repeat obvious implementation detail; document contracts, invariants, ownership,
-units, and edge cases instead. Keep prose wrapped at 100 columns and use
-backticks for C++ identifiers and literal command names.
+Document public types and their members, constructors, public functions, and externally meaningful
+destructors. Every parameter and non-void result that needs interpretation has an `@param` or
+`@return` entry. Prefer `@copydoc` for overrides whose contract is unchanged. Do not repeat obvious
+implementation detail; document contracts, invariants, ownership, units, and edge cases instead.
+Keep prose wrapped at 100 columns and use backticks for C++ identifiers and literal command names.
 
-`docs/Doxyfile` treats documentation warnings as errors and includes only public
-headers. Run `cmake --build build --target docs` to generate the HTML reference
-when Doxygen is available.
+`@complexity` is a project alias that renders a `Complexity` paragraph. `docs/Doxyfile` treats
+documentation warnings as errors and scans the headers exposed from `src/`. Configure CMake after
+installing Doxygen, then run `cmake --build build --target docs` to generate the HTML reference.

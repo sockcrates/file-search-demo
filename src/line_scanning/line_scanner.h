@@ -20,7 +20,9 @@ struct LineRange {
 
 /** @brief A complete line and its ordering, determined from one centered read. */
 struct LineProbe {
+  /** @brief Newline-excluding byte range of the probed line. */
   LineRange range;
+  /** @brief Unsigned-byte ordering of `range` relative to the search term. */
   std::strong_ordering ordering;
 };
 
@@ -34,6 +36,7 @@ class LineScanner {
 public:
   /**
    * @brief Create a scanner over @p reader using a reusable chunk buffer.
+   * @param reader Borrowed random-access source that must outlive this scanner.
    * @param buffer_size Size, in bytes, of the read buffer; must be non-zero.
    * @throws std::invalid_argument If @p buffer_size is zero.
    */
@@ -49,19 +52,28 @@ public:
 
   /**
    * @brief Find the exclusive end of the line starting at @p start.
+   * @param start Start offset of a line in the reader.
+   * @pre `start <= reader.size()` and @p start begins a line.
    * @return The newline offset, or the reader size for an unterminated final line.
    */
   [[nodiscard]] std::uint64_t line_end(std::uint64_t start) const;
 
-  /** @brief Return the newline-excluding range of the line containing @p offset. */
+  /**
+   * @brief Return the newline-excluding range of the line containing @p offset.
+   * @param offset Byte position, clamped to the reader's end when larger.
+   * @return The containing line's half-open range, or `{0, 0}` for an empty reader.
+   */
   [[nodiscard]] LineRange line_containing(std::uint64_t offset) const;
 
   /**
    * @brief Compare the line around @p offset when it fits in one centered buffer.
+   * @param offset Byte position whose line is probed.
+   * @param term Search term compared using unsigned ASCII bytes.
    *
    * Returns `std::nullopt` when either line boundary lies outside the centered
    * buffer, so callers can fall back to directional chunk scanning. A newline
    * position belongs to the preceding line, matching line_start_containing().
+   * @return The line range and its ordering, or `std::nullopt` when the line does not fit.
    */
   [[nodiscard]] std::optional<LineProbe> probe_containing(std::uint64_t offset,
                                                           std::string_view term) const;
