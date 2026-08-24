@@ -23,8 +23,8 @@ std::uint64_t LineScanner::line_start_containing(std::uint64_t offset) const {
   auto position = std::min(offset, file_size);
   while (position > 0) {
     const auto chunk_start = position > buffer_.size() ? position - buffer_.size() : 0;
-    const auto count =
-        reader_.read(chunk_start, buffer_.data(), static_cast<std::size_t>(position - chunk_start));
+    const auto count = reader_.read(
+        chunk_start, std::span{buffer_}.first(static_cast<std::size_t>(position - chunk_start)));
     for (std::size_t index = count; index > 0; --index) {
       if (buffer_[index - 1] == newline)
         return chunk_start + index;
@@ -38,7 +38,7 @@ std::uint64_t LineScanner::line_end(std::uint64_t start) const {
   const auto file_size = reader_.size();
   auto position = std::min(start, file_size);
   while (position < file_size) {
-    const auto count = reader_.read(position, buffer_.data(), buffer_.size());
+    const auto count = reader_.read(position, std::span{buffer_});
     if (count == 0)
       break;
     const auto *newline_position =
@@ -67,7 +67,7 @@ std::optional<LineProbe> LineScanner::probe_containing(std::uint64_t offset,
   const auto desired_start = anchor > half_window ? anchor - half_window : 0;
   const auto window_start = std::min(desired_start, file_size - window_size);
   const auto count =
-      reader_.read(window_start, buffer_.data(), static_cast<std::size_t>(window_size));
+      reader_.read(window_start, std::span{buffer_}.first(static_cast<std::size_t>(window_size)));
   if (count == 0)
     return std::nullopt;
 

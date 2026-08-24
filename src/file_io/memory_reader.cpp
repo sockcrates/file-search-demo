@@ -14,16 +14,15 @@ std::uint64_t MemoryReader::size() const { return static_cast<std::uint64_t>(byt
 
 std::span<const std::byte> MemoryReader::bytes() const { return bytes_; }
 
-std::size_t MemoryReader::read(std::uint64_t offset, std::byte *destination,
-                               std::size_t capacity) const {
-  if (offset >= size() || capacity == 0)
+std::size_t MemoryReader::read(std::uint64_t offset, std::span<std::byte> destination) const {
+  if (offset >= size() || destination.empty())
     return 0;
   if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
     return 0;
   }
   const auto start = static_cast<std::size_t>(offset);
-  const auto count = std::min(capacity, bytes_.size() - start);
-  std::memcpy(destination, bytes_.data() + start, count);
+  const auto count = std::min(destination.size(), bytes_.size() - start);
+  std::memcpy(destination.data(), bytes_.data() + start, count);
   return count;
 }
 

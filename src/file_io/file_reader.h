@@ -31,8 +31,7 @@ public:
   /** @copydoc ContiguousReader::bytes */
   [[nodiscard]] std::span<const std::byte> bytes() const override;
   /** @copydoc Reader::read */
-  std::size_t read(std::uint64_t offset, std::byte *destination,
-                   std::size_t capacity) const override;
+  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override;
 
 private:
   class FileDescriptor;

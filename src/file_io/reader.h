@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <span>
 
 namespace find::file_io {
 
@@ -9,7 +10,7 @@ namespace find::file_io {
  * @brief Random-access, read-only byte source.
  *
  * Implementations return data beginning at an absolute byte offset. They must
- * not write more than @p capacity bytes to the supplied destination.
+ * not write beyond the supplied destination span.
  */
 class Reader {
 public:
@@ -23,13 +24,13 @@ public:
    * @brief Read a contiguous range of bytes.
    *
    * @param offset Zero-based byte offset at which to start reading.
-   * @param destination Buffer that receives the bytes read.
-   * @param capacity Maximum number of bytes to write to @p destination.
+   * @param destination Buffer that receives the bytes read. Its size bounds
+   *        the operation, preventing a nullable pointer from being separated
+   *        from its capacity.
    * @return Number of bytes read, which is zero at or past end-of-input or when
-   *         @p capacity is zero.
+   *         @p destination is empty.
    */
-  virtual std::size_t read(std::uint64_t offset, std::byte *destination,
-                           std::size_t capacity) const = 0;
+  virtual std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const = 0;
 };
 
 } // namespace
