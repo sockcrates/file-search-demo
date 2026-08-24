@@ -20,6 +20,9 @@ jobs:
     name: Analyze C++
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      CC: /usr/lib/llvm-21/bin/clang
+      CXX: /usr/lib/llvm-21/bin/clang++
     permissions:
       contents: read
       security-events: write
@@ -34,9 +37,9 @@ jobs:
           build-mode: manual
       - uses: jdx/mise-action@5228313ee0372e111a38da051671ca30fc5a96db # v3
         with:
-          cache: true
-      - name: Install pinned tools
-        run: mise install
+          install: false
+      - name: Install prebuilt LLVM 21
+        run: bash scripts/ci/install-llvm-21.sh
       - name: Build project
         run: mise run build
       - name: Perform CodeQL analysis
