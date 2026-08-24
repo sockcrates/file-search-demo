@@ -79,9 +79,8 @@ while `best`, when present, is the earliest known candidate.
 Public C++ APIs use Doxygen documentation. The project follows the documented
 comment and formatting convention in [docs/doxygen.md](docs/doxygen.md).
 
-Install Doxygen with your system package manager and confirm `doxygen --version`
-succeeds. Then install the project's pinned development tools and configure a
-fresh CMake build; configuration discovers Doxygen and creates the `docs` target:
+Install the project's pinned development tools and configure a fresh CMake build;
+configuration discovers Doxygen and creates the `docs` target:
 
 ```console
 $ mise install

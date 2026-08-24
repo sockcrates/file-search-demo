@@ -19,3 +19,42 @@ backend = "asdf:clangd"
 [[tools.cmake]]
 version = "4.0.1"
 backend = "asdf:cmake"
+
+[[tools."github:doxygen/doxygen"]]
+version = "Release_1_17_0"
+backend = "github:doxygen/doxygen"
+
+[tools."github:doxygen/doxygen"."platforms.linux-arm64"]
+checksum = "sha256:75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341829"
+
+[tools."github:doxygen/doxygen"."platforms.linux-arm64-musl"]
+checksum = "sha256:75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341829"
+
+[tools."github:doxygen/doxygen"."platforms.linux-x64"]
+checksum = "sha256:75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341829"
+
+[tools."github:doxygen/doxygen"."platforms.linux-x64-musl"]
+checksum = "sha256:75419ef4f446fc1c24ef12514b574e66e898ee6f527c6ae2ad84f91a905823c2"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.linux.bin.tar.gz"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341829"
+
+[tools."github:doxygen/doxygen"."platforms.macos-arm64"]
+checksum = "sha256:e05a7f647f894d2d82ef26a1d231cda079d2d1d85cf1e1c6fd8072430d80d614"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0-mac-arm.zip"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341676"
+
+[tools."github:doxygen/doxygen"."platforms.macos-x64"]
+checksum = "sha256:27a057d6084e45750f0f99c3d00d19e9fdbe6cd49598add1cb7160462796d195"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0-mac-intel.zip"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341729"
+
+[tools."github:doxygen/doxygen"."platforms.windows-x64"]
+checksum = "sha256:94594407c4cbca3049d76aacbb05d4a6f7d0f4e93c0de410b825d25ca5621c83"
+url = "https://github.com/doxygen/doxygen/releases/download/Release_1_17_0/doxygen-1.17.0.windows.x64.bin.zip"
+url_api = "https://api.github.com/repos/doxygen/doxygen/releases/assets/409341966"
