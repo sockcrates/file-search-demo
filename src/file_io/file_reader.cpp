@@ -105,18 +105,17 @@ std::span<const std::byte> FileReader::bytes() const {
   return {mapping_->data(), static_cast<std::size_t>(size_)};
 }
 
-std::size_t FileReader::read(std::uint64_t offset, std::byte *destination,
-                             std::size_t capacity) const {
-  if (offset >= size_ || capacity == 0)
+std::size_t FileReader::read(std::uint64_t offset, std::span<std::byte> destination) const {
+  if (offset >= size_ || destination.empty())
     return 0;
   if (offset > static_cast<std::uint64_t>(std::numeric_limits<off_t>::max())) {
     throw FileError(FileOperation::read, path_, std::make_error_code(std::errc::value_too_large));
   }
-  const auto allowed = std::min<std::uint64_t>(capacity, size_ - offset);
+  const auto allowed = std::min<std::uint64_t>(destination.size(), size_ - offset);
   const auto requested = static_cast<std::size_t>(allowed);
   for (;;) {
     const auto count =
-        pread(descriptor_->get(), destination, requested, static_cast<off_t>(offset));
+        pread(descriptor_->get(), destination.data(), requested, static_cast<off_t>(offset));
     if (count >= 0) {
       return static_cast<std::size_t>(count);
     }

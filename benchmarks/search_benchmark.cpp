@@ -18,10 +18,9 @@ class CountingReader final : public find::file_io::Reader {
 public:
   explicit CountingReader(const find::file_io::Reader &reader) : reader_(reader) {}
   [[nodiscard]] std::uint64_t size() const override { return reader_.size(); }
-  std::size_t read(std::uint64_t offset, std::byte *destination,
-                   std::size_t capacity) const override {
+  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
     ++calls;
-    const auto count = reader_.read(offset, destination, capacity);
+    const auto count = reader_.read(offset, destination);
     bytes += count;
     return count;
   }

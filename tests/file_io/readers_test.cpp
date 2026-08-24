@@ -14,20 +14,20 @@ TEST(memory_reader_handles_boundaries) {
   find::file_io::MemoryReader reader("abcdef");
   std::array<std::byte, 4> bytes{};
   REQUIRE(reader.size() == 6);
-  REQUIRE(reader.read(0, bytes.data(), bytes.size()) == 4);
+  REQUIRE(reader.read(0, bytes) == 4);
   REQUIRE(std::to_integer<char>(bytes[0]) == 'a');
-  REQUIRE(reader.read(4, bytes.data(), bytes.size()) == 2);
+  REQUIRE(reader.read(4, bytes) == 2);
   REQUIRE(std::to_integer<char>(bytes[1]) == 'f');
-  REQUIRE(reader.read(6, bytes.data(), bytes.size()) == 0);
-  REQUIRE(reader.read(99, bytes.data(), bytes.size()) == 0);
-  REQUIRE(reader.read(UINT64_MAX, bytes.data(), bytes.size()) == 0);
+  REQUIRE(reader.read(6, bytes) == 0);
+  REQUIRE(reader.read(99, bytes) == 0);
+  REQUIRE(reader.read(UINT64_MAX, bytes) == 0);
 }
 
 TEST(memory_reader_handles_empty_input) {
   find::file_io::MemoryReader reader("");
   std::array<std::byte, 1> byte{};
   REQUIRE(reader.size() == 0);
-  REQUIRE(reader.read(0, byte.data(), 1) == 0);
+  REQUIRE(reader.read(0, byte) == 0);
 }
 
 TEST(memory_reader_accepts_explicitly_sized_binary_text) {
@@ -57,10 +57,10 @@ TEST(file_reader_reads_binary_data_without_loading_the_file) {
   find::file_io::FileReader reader(path);
   std::array<std::byte, 32> bytes{};
   REQUIRE(reader.size() == 24);
-  REQUIRE(reader.read(6, bytes.data(), 8) == 8);
+  REQUIRE(reader.read(6, std::span{bytes}.first(8U)) == 8);
   REQUIRE(std::to_integer<char>(bytes[0]) == '\n');
   REQUIRE(std::to_integer<char>(bytes[1]) == 'l');
-  REQUIRE(reader.read(reader.size(), bytes.data(), bytes.size()) == 0);
+  REQUIRE(reader.read(reader.size(), bytes) == 0);
   const auto mapped = reader.bytes();
   REQUIRE(mapped.size() == reader.size());
   REQUIRE(std::to_integer<char>(mapped[6]) == '\n');

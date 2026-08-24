@@ -18,10 +18,10 @@ std::strong_ordering LineComparator::compare(std::uint64_t start, std::uint64_t 
   std::size_t term_offset = 0;
   while (offset < end && term_offset < term.size()) {
     const auto count = reader_.read(
-        offset, buffer_.data(),
-        std::min<std::uint64_t>(
+        offset,
+        std::span{buffer_}.first(static_cast<std::size_t>(std::min<std::uint64_t>(
             buffer_.size(),
-            std::min(end - offset, static_cast<std::uint64_t>(term.size() - term_offset))));
+            std::min(end - offset, static_cast<std::uint64_t>(term.size() - term_offset))))));
     const auto comparison = std::memcmp(buffer_.data(), term.data() + term_offset, count);
     if (comparison < 0)
       return std::strong_ordering::less;
@@ -46,7 +46,8 @@ LineComparison LineComparator::compare_from(std::uint64_t start, std::uint64_t f
     const auto capacity = std::min<std::uint64_t>(
         buffer_.size(),
         std::min(file_size - offset, static_cast<std::uint64_t>(term_remaining) + 1));
-    const auto count = reader_.read(offset, buffer_.data(), static_cast<std::size_t>(capacity));
+    const auto count =
+        reader_.read(offset, std::span{buffer_}.first(static_cast<std::size_t>(capacity)));
     if (count == 0)
       throw std::runtime_error("unexpected end of file while comparing line");
 
@@ -83,7 +84,8 @@ std::string LineComparator::read_line(std::uint64_t start, std::uint64_t end) co
   result.reserve(static_cast<std::size_t>(end - start));
   for (auto offset = start; offset < end;) {
     const auto count =
-        reader_.read(offset, buffer_.data(), std::min<std::uint64_t>(buffer_.size(), end - offset));
+        reader_.read(offset, std::span{buffer_}.first(static_cast<std::size_t>(
+                                 std::min<std::uint64_t>(buffer_.size(), end - offset))));
     if (count == 0)
       throw std::runtime_error("unexpected end of file while reading line");
     result.append(reinterpret_cast<const char *>(buffer_.data()), count);
