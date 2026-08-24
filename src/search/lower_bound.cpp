@@ -11,7 +11,7 @@ namespace find::search {
 namespace {
 
 struct ContiguousComparison {
-  std::strong_ordering ordering;
+  std::strong_ordering ordering = std::strong_ordering::equal;
   std::optional<std::size_t> end;
 };
 
