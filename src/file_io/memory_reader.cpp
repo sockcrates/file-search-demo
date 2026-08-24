@@ -1,6 +1,7 @@
 #include "file_io/memory_reader.h"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
 
 namespace find::file_io {
