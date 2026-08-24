@@ -16,30 +16,32 @@
 namespace {
 class CountingReader final : public find::file_io::Reader {
 public:
-  explicit CountingReader(const find::file_io::Reader &reader) : reader_(reader) {}
-  [[nodiscard]] std::uint64_t size() const override { return reader_.size(); }
+  explicit CountingReader(const find::file_io::Reader &reader) : reader_(&reader) {}
+  [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
   std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
-    ++calls;
-    const auto count = reader_.read(offset, destination);
-    bytes += count;
+    ++calls_;
+    const auto count = reader_->read(offset, destination);
+    bytes_ += count;
     return count;
   }
-  mutable std::size_t calls = 0;
-  mutable std::size_t bytes = 0;
+  [[nodiscard]] std::size_t calls() const noexcept { return calls_; }
+  [[nodiscard]] std::size_t bytes() const noexcept { return bytes_; }
 
 private:
-  const find::file_io::Reader &reader_;
+  const find::file_io::Reader *reader_;
+  mutable std::size_t calls_ = 0;
+  mutable std::size_t bytes_ = 0;
 };
 
 void run(std::string_view label, const std::string &data, std::string_view term) {
-  find::file_io::MemoryReader backing(data.c_str());
+  find::file_io::MemoryReader backing(data);
   CountingReader reader(backing);
   const auto started = std::chrono::steady_clock::now();
   const auto result = find::search::lower_bound(reader, term);
   const auto elapsed = std::chrono::steady_clock::now() - started;
   std::cout << label << ": "
             << std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() << " us, "
-            << reader.bytes << " bytes read, " << reader.calls << " reads, result=";
+            << reader.bytes() << " bytes read, " << reader.calls() << " reads, result=";
   if (!result) {
     std::cout << "<none>\n";
     return;
@@ -52,13 +54,15 @@ void run(std::string_view label, const std::string &data, std::string_view term)
 void run_mapped(std::string_view label, const std::string &data, std::string_view term) {
   const auto path = std::filesystem::temp_directory_path() /
                     ("find-benchmark-" + std::to_string(getpid()) + ".txt");
-  if (std::filesystem::exists(path))
+  if (std::filesystem::exists(path)) {
     throw std::runtime_error("mapped benchmark file already exists");
+  }
   {
     std::ofstream output(path, std::ios::binary);
     output.write(data.data(), static_cast<std::streamsize>(data.size()));
-    if (!output)
+    if (!output) {
       throw std::runtime_error("cannot write mapped benchmark file");
+    }
   }
 
   try {
@@ -84,36 +88,48 @@ void run_mapped(std::string_view label, const std::string &data, std::string_vie
 }
 
 std::string padded_key(std::string_view prefix, std::size_t index) {
+  constexpr std::size_t key_width = 6U;
   const auto number = std::to_string(index);
-  return std::string(prefix) + std::string(6 - number.size(), '0') + number;
+  return std::string(prefix) + std::string(key_width - number.size(), '0') + number;
 }
 } // namespace
 
 int main() {
-  std::string short_lines;
-  for (std::size_t index = 0; index < 500000; ++index) {
-    short_lines += padded_key("key", index) + '\n';
+  try {
+    constexpr std::size_t short_line_count = 500000U;
+    constexpr std::size_t duplicate_line_count = 300000U;
+    constexpr std::size_t kibibyte = 1024U;
+    constexpr std::size_t large_prefix_size = 4U * kibibyte * kibibyte;
+    constexpr std::size_t enormous_line_size = 2U * kibibyte * kibibyte;
+    std::string short_lines;
+    for (std::size_t index = 0; index < short_line_count; ++index) {
+      short_lines += padded_key("key", index) + '\n';
+    }
+    run("many short lines (before first)", short_lines, "aaa");
+    run("many short lines (near beginning)", short_lines, "key000001");
+    run("many short lines (middle)", short_lines, "key250000");
+    run("many short lines (near end)", short_lines, "key499999");
+    run("many short lines (after last)", short_lines, "zzz");
+    run_mapped("mapped many short lines (middle)", short_lines, "key250000");
+
+    std::string duplicates;
+    for (std::size_t index = 0; index < duplicate_line_count; ++index) {
+      duplicates += "duplicate\n";
+    }
+    run("many identical lines", duplicates, "duplicate");
+
+    const std::string prefixes =
+        std::string(large_prefix_size, 'a') + "b\n" + std::string(large_prefix_size, 'a') + "c\n";
+    run("enormous common prefixes", prefixes, std::string(large_prefix_size, 'a') + "b");
+    run_mapped("mapped enormous common prefixes", prefixes,
+               std::string(large_prefix_size, 'a') + "b");
+
+    const std::string enormous_lines = std::string(enormous_line_size, 'a') + "\n" +
+                                       std::string(enormous_line_size, 'b') + "\n" +
+                                       std::string(enormous_line_size, 'c') + "\n";
+    run("a few enormous lines", enormous_lines, "b");
+  } catch (const std::exception &error) {
+    std::cerr << "find benchmark: " << error.what() << '\n';
+    return 1;
   }
-  run("many short lines (before first)", short_lines, "aaa");
-  run("many short lines (near beginning)", short_lines, "key000001");
-  run("many short lines (middle)", short_lines, "key250000");
-  run("many short lines (near end)", short_lines, "key499999");
-  run("many short lines (after last)", short_lines, "zzz");
-  run_mapped("mapped many short lines (middle)", short_lines, "key250000");
-
-  std::string duplicates;
-  for (std::size_t index = 0; index < 300000; ++index)
-    duplicates += "duplicate\n";
-  run("many identical lines", duplicates, "duplicate");
-
-  const std::string prefixes =
-      std::string(4U * 1024U * 1024U, 'a') + "b\n" + std::string(4U * 1024U * 1024U, 'a') + "c\n";
-  run("enormous common prefixes", prefixes, std::string(4U * 1024U * 1024U, 'a') + "b");
-  run_mapped("mapped enormous common prefixes", prefixes,
-             std::string(4U * 1024U * 1024U, 'a') + "b");
-
-  const std::string enormous_lines = std::string(2U * 1024U * 1024U, 'a') + "\n" +
-                                     std::string(2U * 1024U * 1024U, 'b') + "\n" +
-                                     std::string(2U * 1024U * 1024U, 'c') + "\n";
-  run("a few enormous lines", enormous_lines, "b");
 }

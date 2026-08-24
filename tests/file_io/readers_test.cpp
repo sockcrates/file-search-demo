@@ -55,7 +55,8 @@ TEST(file_reader_reads_binary_data_without_loading_the_file) {
     output << "first\n\nlonger final line";
   }
   find::file_io::FileReader reader(path);
-  std::array<std::byte, 32> bytes{};
+  constexpr std::size_t buffer_size = 32U;
+  std::array<std::byte, buffer_size> bytes{};
   REQUIRE(reader.size() == 24);
   REQUIRE(reader.read(6, std::span{bytes}.first(8U)) == 8);
   REQUIRE(std::to_integer<char>(bytes[0]) == '\n');
@@ -70,7 +71,7 @@ TEST(file_reader_reads_binary_data_without_loading_the_file) {
 
 TEST(file_reader_exposes_an_empty_contiguous_view_for_empty_files) {
   const auto path = std::filesystem::temp_directory_path() / "find-empty-reader-test.txt";
-  std::ofstream(path, std::ios::binary);
+  std::ofstream output(path, std::ios::binary);
   find::file_io::FileReader reader(path);
   REQUIRE(reader.size() == 0);
   REQUIRE(reader.bytes().empty());

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_FILE_IO_CONTIGUOUS_READER_H
+#define FIND_FILE_IO_CONTIGUOUS_READER_H
 
 #include "file_io/reader.h"
 
@@ -17,3 +18,5 @@ public:
 };
 
 } // namespace find::file_io
+
+#endif // FIND_FILE_IO_CONTIGUOUS_READER_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_SEARCH_LOWER_BOUND_H
+#define FIND_SEARCH_LOWER_BOUND_H
 
 #include "file_io/reader.h"
 
@@ -27,3 +28,5 @@ namespace find::search {
 
 } // namespace
   // find::search
+
+#endif // FIND_SEARCH_LOWER_BOUND_H

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_LINE_SCANNING_LINE_SCANNER_H
+#define FIND_LINE_SCANNING_LINE_SCANNER_H
 
 #include "file_io/reader.h"
 
@@ -9,6 +10,8 @@
 #include <vector>
 
 namespace find::line_scanning {
+
+inline constexpr std::size_t default_scanner_buffer_size = 4096U;
 
 /** @brief Half-open byte range occupied by a line, excluding its newline. */
 struct LineRange {
@@ -40,7 +43,8 @@ public:
    * @param buffer_size Size, in bytes, of the read buffer; must be non-zero.
    * @throws std::invalid_argument If @p buffer_size is zero.
    */
-  explicit LineScanner(const file_io::Reader &reader, std::size_t buffer_size = 4U * 1024U);
+  explicit LineScanner(const file_io::Reader &reader,
+                       std::size_t buffer_size = default_scanner_buffer_size);
 
   /**
    * @brief Find the first byte of the line containing @p offset.
@@ -79,9 +83,12 @@ public:
                                                           std::string_view term) const;
 
 private:
-  const file_io::Reader &reader_;
+  const file_io::Reader &reader_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members):
+                                  // non-null borrowed reader
   mutable std::vector<std::byte> buffer_;
 };
 
 } // namespace
   // find::line_scanning
+
+#endif // FIND_LINE_SCANNING_LINE_SCANNER_H

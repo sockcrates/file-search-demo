@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FIND_FILE_IO_READER_H
+#define FIND_FILE_IO_READER_H
 
 #include <cstddef>
 #include <cstdint>
@@ -14,6 +15,12 @@ namespace find::file_io {
  */
 class Reader {
 public:
+  Reader() = default;
+  Reader(const Reader &) = default;
+  Reader(Reader &&) = default;
+  Reader &operator=(const Reader &) = default;
+  Reader &operator=(Reader &&) = default;
+
   /** @brief Destroy the reader through its interface. */
   virtual ~Reader() = default;
 
@@ -35,3 +42,5 @@ public:
 
 } // namespace
   // find::file_io
+
+#endif // FIND_FILE_IO_READER_H

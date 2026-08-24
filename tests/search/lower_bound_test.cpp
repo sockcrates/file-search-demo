@@ -19,21 +19,22 @@ std::optional<std::string> search(const char *input, std::string_view term) {
 
 class CountingReader final : public find::file_io::Reader {
 public:
-  explicit CountingReader(const find::file_io::Reader &reader) : reader_(reader) {}
+  explicit CountingReader(const find::file_io::Reader &reader) : reader_(&reader) {}
 
-  [[nodiscard]] std::uint64_t size() const override { return reader_.size(); }
+  [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
   std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
-    ++read_calls;
-    const auto count = reader_.read(offset, destination);
-    bytes_read += count;
+    ++read_calls_;
+    const auto count = reader_->read(offset, destination);
+    bytes_read_ += count;
     return count;
   }
-
-  mutable std::size_t read_calls = 0;
-  mutable std::size_t bytes_read = 0;
+  [[nodiscard]] std::size_t read_calls() const noexcept { return read_calls_; }
+  [[nodiscard]] std::size_t bytes_read() const noexcept { return bytes_read_; }
 
 private:
-  const find::file_io::Reader &reader_;
+  const find::file_io::Reader *reader_;
+  mutable std::size_t read_calls_ = 0;
+  mutable std::size_t bytes_read_ = 0;
 };
 
 class NoReadContiguousReader final : public find::file_io::ContiguousReader {
@@ -42,7 +43,7 @@ public:
 
   [[nodiscard]] std::uint64_t size() const override { return backing_.size(); }
   [[nodiscard]] std::span<const std::byte> bytes() const override { return backing_.bytes(); }
-  std::size_t read(std::uint64_t, std::span<std::byte>) const override {
+  std::size_t read(std::uint64_t /*offset*/, std::span<std::byte> /*destination*/) const override {
     throw std::runtime_error("direct path must not read");
   }
 
@@ -68,15 +69,16 @@ TEST(lower_bound_handles_duplicates_empty_and_unterminated_lines) {
 
 TEST(lower_bound_handles_long_lines) {
   const std::string input = std::string(100000, 'a') + "\n" + std::string(100000, 'b');
-  find::file_io::MemoryReader reader(input.c_str());
+  find::file_io::MemoryReader reader(input);
   REQUIRE(find::search::lower_bound(reader, std::string(99999, 'a') + "z") ==
           std::string(100000, 'b'));
 }
 
 TEST(lower_bound_handles_a_line_larger_than_ten_mebibytes) {
-  const std::string long_line(10U * 1024U * 1024U + 1U, 'a');
+  constexpr std::size_t mebibyte = std::size_t{1024U} * 1024U;
+  const std::string long_line((10U * mebibyte) + 1U, 'a');
   const std::string input = long_line + "\nb";
-  find::file_io::MemoryReader reader(input.c_str());
+  find::file_io::MemoryReader reader(input);
   REQUIRE(find::search::lower_bound(reader, long_line + "z") == "b");
 }
 
@@ -91,8 +93,9 @@ TEST(lower_bound_handles_files_made_only_of_newlines_and_repeated_searches) {
 TEST(lower_bound_matches_a_linear_reference_for_many_terms) {
   const std::vector<std::string> lines{"", "a", "apple", "apple", "apricot", "b", "zz"};
   std::string input;
-  for (const auto &line : lines)
+  for (const auto &line : lines) {
     input += line + '\n';
+  }
   for (const auto &term : {"", "a", "aa", "apple", "apz", "b", "z", "zz", "zzz"}) {
     std::optional<std::string> expected;
     for (const auto &line : lines) {
@@ -101,39 +104,44 @@ TEST(lower_bound_matches_a_linear_reference_for_many_terms) {
         break;
       }
     }
-    find::file_io::MemoryReader reader(input.c_str());
+    find::file_io::MemoryReader reader(input);
     REQUIRE(find::search::lower_bound(reader, term) == expected);
   }
 }
 
 TEST(lower_bound_reads_a_sublinear_number_of_chunks_for_many_short_lines) {
   constexpr std::size_t line_count = 100000;
+  constexpr std::size_t characters_per_line = 8U;
+  constexpr std::size_t key_width = 6U;
+  constexpr std::size_t maximum_bytes_read = std::size_t{2U} * 1024U * 1024U;
   std::string input;
-  input.reserve(line_count * 8);
+  input.reserve(line_count * characters_per_line);
   for (std::size_t index = 0; index < line_count; ++index) {
     const auto number = std::to_string(index);
-    input += "a" + std::string(6 - number.size(), '0') + number + '\n';
+    input += "a" + std::string(key_width - number.size(), '0') + number + '\n';
   }
-  find::file_io::MemoryReader backing(input.c_str());
+  find::file_io::MemoryReader backing(input);
   CountingReader reader(backing);
   REQUIRE(find::search::lower_bound(reader, "a099999") == "a099999");
-  REQUIRE(reader.read_calls < 100);
-  REQUIRE(reader.bytes_read < 2U * 1024U * 1024U);
+  REQUIRE(reader.read_calls() < 100U);
+  REQUIRE(reader.bytes_read() < maximum_bytes_read);
 }
 
 TEST(lower_bound_reuses_a_centered_probe_for_a_short_midpoint_line) {
   constexpr std::size_t line_count = 100000;
+  constexpr std::size_t characters_per_line = 8U;
+  constexpr std::size_t key_width = 6U;
   std::string input;
-  input.reserve(line_count * 8);
+  input.reserve(line_count * characters_per_line);
   for (std::size_t index = 0; index < line_count; ++index) {
     const auto number = std::to_string(index);
-    input += "a" + std::string(6 - number.size(), '0') + number + '\n';
+    input += "a" + std::string(key_width - number.size(), '0') + number + '\n';
   }
-  find::file_io::MemoryReader backing(input.c_str());
+  find::file_io::MemoryReader backing(input);
   CountingReader reader(backing);
 
   REQUIRE(find::search::lower_bound(reader, "a050000") == "a050000");
-  REQUIRE(reader.read_calls == 1);
+  REQUIRE(reader.read_calls() == 1U);
 }
 
 TEST(lower_bound_uses_a_contiguous_reader_without_copy_reads) {
@@ -144,8 +152,9 @@ TEST(lower_bound_uses_a_contiguous_reader_without_copy_reads) {
 TEST(lower_bound_contiguous_path_matches_generic_reader_at_boundaries) {
   find::file_io::MemoryReader direct("\n\napple\napple\nbanana");
   CountingReader generic(direct);
-  for (const auto term : {"", "apple", "apz", "banana", "z"})
+  for (const auto *const term : {"", "apple", "apz", "banana", "z"}) {
     REQUIRE(find::search::lower_bound(direct, term) == find::search::lower_bound(generic, term));
+  }
 }
 
 TEST(lower_bound_searches_a_mapped_file) {

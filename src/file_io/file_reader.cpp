@@ -29,6 +29,8 @@ public:
 
   FileDescriptor(const FileDescriptor &) = delete;
   FileDescriptor &operator=(const FileDescriptor &) = delete;
+  FileDescriptor(FileDescriptor &&) = delete;
+  FileDescriptor &operator=(FileDescriptor &&) = delete;
 
   [[nodiscard]] int get() const noexcept { return descriptor_; }
 
@@ -43,6 +45,8 @@ public:
 
   Mapping(const Mapping &) = delete;
   Mapping &operator=(const Mapping &) = delete;
+  Mapping(Mapping &&) = delete;
+  Mapping &operator=(Mapping &&) = delete;
 
   [[nodiscard]] const std::byte *data() const noexcept {
     return static_cast<const std::byte *>(address_);
@@ -95,6 +99,10 @@ FileReader::FileReader(const std::filesystem::path &path) {
 }
 
 FileReader::~FileReader() = default;
+
+FileReader::FileReader(FileReader &&) noexcept = default;
+
+FileReader &FileReader::operator=(FileReader &&) noexcept = default;
 
 std::uint64_t FileReader::size() const { return size_; }
 

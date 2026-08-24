@@ -28,27 +28,36 @@ TEST(line_scanner_handles_line_larger_than_buffer) {
 
 TEST(line_scanner_centered_probe_compares_a_complete_line_and_preserves_newline_ownership) {
   find::file_io::MemoryReader reader("aaa\nbbb\nccc");
-  find::line_scanning::LineScanner scanner(reader, 8);
+  constexpr std::size_t buffer_size = 8U;
+  find::line_scanning::LineScanner scanner(reader, buffer_size);
 
   const auto middle = scanner.probe_containing(5, "bbb");
   REQUIRE(middle.has_value());
-  REQUIRE(middle->range.start == 4);
-  REQUIRE(middle->range.end == 7);
-  REQUIRE(middle->ordering == std::strong_ordering::equal);
+  // REQUIRE throws on failure, but clang-tidy cannot infer that macro's control flow.
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+  const auto &middle_probe = middle.value();
+  REQUIRE(middle_probe.range.start == 4);
+  REQUIRE(middle_probe.range.end == 7);
+  REQUIRE(middle_probe.ordering == std::strong_ordering::equal);
 
   const auto lower_term = scanner.probe_containing(5, "bba");
   REQUIRE(lower_term.has_value());
-  REQUIRE(lower_term->ordering == std::strong_ordering::greater);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+  REQUIRE(lower_term.value().ordering == std::strong_ordering::greater);
 
   const auto higher_term = scanner.probe_containing(5, "bbc");
   REQUIRE(higher_term.has_value());
-  REQUIRE(higher_term->ordering == std::strong_ordering::less);
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+  REQUIRE(higher_term.value().ordering == std::strong_ordering::less);
 
   const auto newline = scanner.probe_containing(3, "aaa");
   REQUIRE(newline.has_value());
-  REQUIRE(newline->range.start == 0);
-  REQUIRE(newline->range.end == 3);
-  REQUIRE(newline->ordering == std::strong_ordering::equal);
+  // REQUIRE throws on failure, but clang-tidy cannot infer that macro's control flow.
+  // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
+  const auto &newline_probe = newline.value();
+  REQUIRE(newline_probe.range.start == 0);
+  REQUIRE(newline_probe.range.end == 3);
+  REQUIRE(newline_probe.ordering == std::strong_ordering::equal);
 }
 
 TEST(line_scanner_centered_probe_falls_back_when_a_line_crosses_the_window_boundary) {
