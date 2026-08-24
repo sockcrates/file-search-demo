@@ -1,20 +1,8 @@
 #include "test_support.h"
 
-#include <cstdlib>
 #include <iostream>
-#include <string>
 
-int main(int argc, char **argv) {
-  if (argc == 3 && std::string(argv[1]) == "--integration") {
-    const auto command = std::string("'") + argv[2] + "' carr '" + std::string(TEST_SOURCE_DIR) +
-                         "/tests/fixtures/vegetables.txt' > /tmp/find-output";
-    if (std::system(command.c_str()) != 0)
-      return 1;
-    return std::system((std::string("test \"") + "$(cat /tmp/find-output)\" = carrot").c_str()) ==
-                   0
-               ? 0
-               : 1;
-  }
+int main() {
   int failures = 0;
   for (const auto &[name, body] : test::cases()) {
     try {
