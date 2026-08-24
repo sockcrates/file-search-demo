@@ -16,10 +16,15 @@ sudo install --mode 0644 "${RUNNER_TEMP}/llvm-archive-keyring.gpg" "$keyring_pat
 printf '%s\n' "$source_entry" | sudo tee "$source_path" > /dev/null
 
 sudo apt-get update
-sudo apt-get install --yes --no-install-recommends clang-21 clang-format-21 clang-tidy-21
+# libclang-rt-21-dev provides the AddressSanitizer and UndefinedBehaviorSanitizer
+# runtimes used by clang++ when the sanitizer CI job links its executables.
+sudo apt-get install --yes --no-install-recommends clang-21 clang-format-21 clang-tidy-21 libclang-rt-21-dev
 
 llvm_bin="/usr/lib/llvm-21/bin"
 test -x "$llvm_bin/clang++"
 test -x "$llvm_bin/clang-format"
 test -x "$llvm_bin/clang-tidy"
+asan_runtime="$("$llvm_bin/clang++" -print-file-name=libclang_rt.asan.a)"
+test "$asan_runtime" != "libclang_rt.asan.a"
+test -f "$asan_runtime"
 printf '%s\n' "$llvm_bin" >> "${GITHUB_PATH:?GITHUB_PATH must be set}"
