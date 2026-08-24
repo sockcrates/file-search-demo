@@ -41,6 +41,7 @@ struct UsageError {
   /** @brief Number of entries supplied, including the executable name. */
   std::size_t argument_count;
 
+  /** @brief Compare usage failures by code and supplied argument count. */
   [[nodiscard]] friend bool operator==(const UsageError &, const UsageError &) = default;
 };
 

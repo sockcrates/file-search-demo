@@ -19,6 +19,7 @@ HIDE_UNDOC_CLASSES     = YES
 JAVADOC_AUTOBRIEF      = YES
 QT_AUTOBRIEF           = NO
 MARKDOWN_SUPPORT       = YES
+ALIASES                += complexity="\\par Complexity:"
 
 WARNINGS               = YES
 WARN_IF_UNDOCUMENTED   = YES

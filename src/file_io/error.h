@@ -30,7 +30,13 @@ enum class FileOperation {
  */
 class FileError final : public std::runtime_error {
 public:
-  /** @brief Construct an error describing @p operation on @p path. */
+  /**
+   * @brief Construct an error describing @p operation on @p path.
+   * @param operation File action that failed.
+   * @param path Path associated with the failed action.
+   * @param system_error POSIX or validation error captured at the failure
+   *                     boundary.
+   */
   FileError(FileOperation operation, std::filesystem::path path, std::error_code system_error);
 
   /** @brief Failed file operation. */

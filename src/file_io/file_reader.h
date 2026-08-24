@@ -17,13 +17,16 @@ class FileReader final : public ContiguousReader {
 public:
   /**
    * @brief Open and map a stable regular file for read-only random access.
+   * @param path Regular file to open and map.
    * @throws FileError If opening, inspecting, validating, mapping, or reading
    *         the file fails. The error identifies the operation, path, and code.
    */
   explicit FileReader(const std::filesystem::path &path);
-  /** @brief Close the open file descriptor, if any. */
+  /** @brief Release the mapping and close the open file descriptor, if any. */
   ~FileReader() override;
+  /** @brief Copying a resource-owning mapped reader is not supported. */
   FileReader(const FileReader &) = delete;
+  /** @brief Copy assignment of a resource-owning mapped reader is not supported. */
   FileReader &operator=(const FileReader &) = delete;
 
   /** @copydoc Reader::size */
