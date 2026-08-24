@@ -1,12 +1,18 @@
 [plugins]
 clang-tidy = "https://github.com/mise-plugins/mise-llvm.git"
 
+[settings]
+github_attestations = true
+provenance_api_failures_fatal = true
+slsa = true
+
 [tools]
 clang = "21.1.8"
 clangd = "21.1.8"
 clang-format = "21.1.8"
 clang-tidy = "21.1.8"
 cmake = "4.0.1"
+"github:doxygen/doxygen" = "Release_1_17_0"
 
 [tasks.configure]
 description = "Configure the CMake build with LLVM Clang"
