@@ -30,6 +30,16 @@ TEST(memory_reader_handles_empty_input) {
   REQUIRE(reader.read(0, byte.data(), 1) == 0);
 }
 
+TEST(memory_reader_accepts_explicitly_sized_binary_text) {
+  constexpr std::string_view text{"a\0b", 3U};
+  find::file_io::MemoryReader reader(text);
+  const auto bytes = reader.bytes();
+  REQUIRE(bytes.size() == text.size());
+  REQUIRE(std::to_integer<char>(bytes[0]) == 'a');
+  REQUIRE(std::to_integer<char>(bytes[1]) == '\0');
+  REQUIRE(std::to_integer<char>(bytes[2]) == 'b');
+}
+
 TEST(memory_reader_exposes_a_contiguous_view) {
   find::file_io::MemoryReader reader("abcdef");
   const auto bytes = reader.bytes();
