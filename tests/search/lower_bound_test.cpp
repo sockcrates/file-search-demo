@@ -5,6 +5,7 @@
 #include "search/lower_bound.h"
 #include "test_support.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -35,6 +36,21 @@ private:
   const find::file_io::Reader *reader_;
   mutable std::size_t read_calls_ = 0;
   mutable std::size_t bytes_read_ = 0;
+};
+
+class ShortReadReader final : public find::file_io::Reader {
+public:
+  ShortReadReader(const find::file_io::Reader &reader, std::size_t maximum_read)
+      : reader_(&reader), maximum_read_(maximum_read) {}
+
+  [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
+  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
+    return reader_->read(offset, destination.first(std::min(destination.size(), maximum_read_)));
+  }
+
+private:
+  const find::file_io::Reader *reader_;
+  std::size_t maximum_read_;
 };
 
 class NoReadContiguousReader final : public find::file_io::ContiguousReader {
@@ -72,6 +88,21 @@ TEST(lower_bound_handles_long_lines) {
   find::file_io::MemoryReader reader(input);
   REQUIRE(find::search::lower_bound(reader, std::string(99999, 'a') + "z") ==
           std::string(100000, 'b'));
+}
+
+TEST(lower_bound_handles_short_reads_from_a_generic_reader) {
+  find::file_io::MemoryReader backing("apple\napricot\navocado\nbanana");
+  ShortReadReader reader(backing, 3U);
+  REQUIRE(find::search::lower_bound(reader, "apri") == "apricot");
+  REQUIRE(find::search::lower_bound(reader, "z") == std::nullopt);
+}
+
+TEST(lower_bound_falls_back_for_a_large_line_with_a_generic_reader) {
+  const std::string long_line((2U * 1024U) + 1U, 'a');
+  find::file_io::MemoryReader backing(long_line + "\nb");
+  CountingReader reader(backing);
+  REQUIRE(find::search::lower_bound(reader, long_line + "z") == "b");
+  REQUIRE(reader.read_calls() > 1U);
 }
 
 TEST(lower_bound_handles_a_line_larger_than_ten_mebibytes) {

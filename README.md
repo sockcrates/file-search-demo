@@ -47,7 +47,7 @@ To build directly with CMake:
 ```console
 $ cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++
 $ cmake --build build
-$ ./build/find apri fruits.txt
+$ ./build/find apri tests/fixtures/fruits.txt
 ```
 
 ## Behaviour and performance
