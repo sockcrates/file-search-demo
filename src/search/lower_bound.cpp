@@ -71,7 +71,10 @@ std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> byt
     if (ordering == std::strong_ordering::less) {
       auto end = comparison.end;
       if (!end) {
-        auto line_end = start;
+        // Finding start already examined the prefix through midpoint. Resume at
+        // midpoint so an early mismatch on a very long line is not scanned twice.
+        // At a newline, this correctly returns midpoint as the current line's end.
+        auto line_end = midpoint;
         while (line_end < size && data[line_end] != '\n')
           ++line_end;
         end = line_end;
@@ -123,7 +126,11 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
-      const auto end = probe ? probe->range.end : comparison->end.value_or(scanner.line_end(start));
+      // line_start_containing() has already read up to midpoint. When comparison
+      // ends early, continue from midpoint to avoid revisiting that prefix. A
+      // midpoint at a newline is itself the current line's end.
+      const auto end =
+          probe ? probe->range.end : comparison->end.value_or(scanner.line_end(midpoint));
       const auto next = end < file_size ? end + 1 : file_size;
       if (next <= low)
         break;

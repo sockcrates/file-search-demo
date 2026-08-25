@@ -97,12 +97,28 @@ TEST(lower_bound_handles_short_reads_from_a_generic_reader) {
   REQUIRE(find::search::lower_bound(reader, "z") == std::nullopt);
 }
 
+TEST(lower_bound_handles_a_midpoint_at_a_line_terminator) {
+  find::file_io::MemoryReader reader("a\nz");
+  REQUIRE(find::search::lower_bound(reader, "m") == "z");
+}
+
 TEST(lower_bound_falls_back_for_a_large_line_with_a_generic_reader) {
   const std::string long_line((2U * 1024U) + 1U, 'a');
   find::file_io::MemoryReader backing(long_line + "\nb");
   CountingReader reader(backing);
   REQUIRE(find::search::lower_bound(reader, long_line + "z") == "b");
   REQUIRE(reader.read_calls() > 1U);
+}
+
+TEST(lower_bound_does_not_rescan_a_long_line_after_an_early_mismatch) {
+  constexpr std::size_t mebibyte = std::size_t{1024U} * 1024U;
+  constexpr std::size_t scan_slack = std::size_t{128U} * 1024U;
+  const std::string long_line(8U * mebibyte, 'a');
+  find::file_io::MemoryReader backing(long_line + "\nz");
+  CountingReader reader(backing);
+
+  REQUIRE(find::search::lower_bound(reader, "m") == "z");
+  REQUIRE(reader.bytes_read() < long_line.size() + scan_slack);
 }
 
 TEST(lower_bound_handles_a_line_larger_than_ten_mebibytes) {
