@@ -23,12 +23,21 @@ std::uint64_t LineScanner::line_start_containing(std::uint64_t offset) const {
   auto position = std::min(offset, file_size);
   while (position > 0) {
     const auto chunk_start = position > buffer_.size() ? position - buffer_.size() : 0;
-    const auto count = reader_.read(
-        chunk_start, std::span{buffer_}.first(static_cast<std::size_t>(position - chunk_start)));
+    const auto requested = static_cast<std::size_t>(position - chunk_start);
+    std::size_t count = 0;
+    while (count < requested) {
+      const auto read_count = reader_.read(
+          chunk_start + count, std::span{buffer_}.subspan(count, requested - count));
+      if (read_count == 0)
+        break;
+      count += read_count;
+    }
     for (std::size_t index = count; index > 0; --index) {
       if (buffer_[index - 1] == newline)
         return chunk_start + index;
     }
+    if (count < requested)
+      break;
     position = chunk_start;
   }
   return 0;
