@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <limits>
 
 namespace find::search {
 namespace {
@@ -92,9 +93,15 @@ std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> byt
 } // namespace
 
 std::optional<std::string> lower_bound(const file_io::Reader &reader, std::string_view term) {
-  if (const auto *contiguous = dynamic_cast<const file_io::ContiguousReader *>(&reader))
-    return lower_bound_contiguous(contiguous->bytes(), term);
   const auto file_size = reader.size();
+  if (const auto *contiguous = dynamic_cast<const file_io::ContiguousReader *>(&reader)) {
+    const auto bytes = contiguous->bytes();
+    const auto size_matches =
+        file_size <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) &&
+        bytes.size() == static_cast<std::size_t>(file_size);
+    if (size_matches)
+      return lower_bound_contiguous(bytes, term);
+  }
   if (file_size == 0)
     return std::nullopt;
 

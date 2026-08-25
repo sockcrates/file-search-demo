@@ -11,14 +11,14 @@ namespace find::file_io {
 /**
  * @brief POSIX-backed random-access reader for a stable regular file on disk.
  *
- * The file is memory-mapped for the reader's lifetime. Concurrent truncation
- * of the mapped file is unsupported.
+ * Smaller files are memory-mapped for the reader's lifetime; larger files are
+ * read with positioned I/O. Concurrent truncation of the file is unsupported.
  */
 class FileReader final : public ContiguousReader {
 public:
   /**
-   * @brief Open and map a stable regular file for read-only random access.
-   * @param path Regular file to open and map.
+   * @brief Open a stable regular file for read-only random access.
+   * @param path Regular file to open.
    * @throws FileError If opening, inspecting, validating, mapping, or reading
    *         the file fails. The error identifies the operation, path, and code.
    */
@@ -36,7 +36,10 @@ public:
 
   /** @copydoc Reader::size */
   [[nodiscard]] std::uint64_t size() const override;
-  /** @copydoc ContiguousReader::bytes */
+  /** @copydoc ContiguousReader::bytes
+   *  @return The mapped contents, or an empty span when the file is too large
+   *          to map as a whole.
+   */
   [[nodiscard]] std::span<const std::byte> bytes() const override;
   /** @copydoc Reader::read */
   std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override;

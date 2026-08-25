@@ -14,6 +14,8 @@
 namespace find::file_io {
 namespace {
 
+constexpr std::uint64_t max_mapped_file_size = std::uint64_t{1} << 30U;
+
 [[nodiscard]] std::error_code captured_errno() noexcept { return {errno, std::generic_category()}; }
 
 } // namespace
@@ -78,12 +80,9 @@ FileReader::FileReader(const std::filesystem::path &path) {
                     std::make_error_code(std::errc::invalid_argument));
   }
   const auto size = static_cast<std::uint64_t>(details.st_size);
-  if (size > static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    throw FileError(FileOperation::validate_size, path,
-                    std::make_error_code(std::errc::value_too_large));
-  }
   std::unique_ptr<Mapping> mapping;
-  if (size != 0U) {
+  if (size != 0U && size <= max_mapped_file_size &&
+      size <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
     const auto mapped =
         mmap(nullptr, static_cast<std::size_t>(size), PROT_READ, MAP_PRIVATE, descriptor->get(), 0);
     if (mapped == MAP_FAILED) {
