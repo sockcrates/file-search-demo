@@ -78,6 +78,23 @@ TEST(file_reader_exposes_an_empty_contiguous_view_for_empty_files) {
   std::filesystem::remove(path);
 }
 
+TEST(file_reader_uses_positioned_reads_for_files_larger_than_one_gibibyte) {
+  constexpr std::uint64_t gibibyte = std::uint64_t{1024U} * 1024U * 1024U;
+  const auto path = std::filesystem::temp_directory_path() / "find-large-reader-test.txt";
+  {
+    std::ofstream output(path, std::ios::binary);
+    output.seekp(static_cast<std::streamoff>(gibibyte));
+    output.put('z');
+  }
+  find::file_io::FileReader reader(path);
+  std::array<std::byte, 1> byte{};
+  REQUIRE(reader.size() == gibibyte + 1U);
+  REQUIRE(reader.bytes().empty());
+  REQUIRE(reader.read(gibibyte, byte) == 1U);
+  REQUIRE(std::to_integer<char>(byte[0]) == 'z');
+  std::filesystem::remove(path);
+}
+
 TEST(file_reader_maps_binary_bytes_and_remains_valid_after_unlink) {
   const auto path = std::filesystem::temp_directory_path() / "find-binary-reader-test.txt";
   {

@@ -26,8 +26,8 @@ std::uint64_t LineScanner::line_start_containing(std::uint64_t offset) const {
     const auto requested = static_cast<std::size_t>(position - chunk_start);
     std::size_t count = 0;
     while (count < requested) {
-      const auto read_count = reader_.read(
-          chunk_start + count, std::span{buffer_}.subspan(count, requested - count));
+      const auto read_count =
+          reader_.read(chunk_start + count, std::span{buffer_}.subspan(count, requested - count));
       if (read_count == 0)
         break;
       count += read_count;

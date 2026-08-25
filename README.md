@@ -56,12 +56,13 @@ Input must be sorted in unsigned ASCII byte order. A final line without a
 trailing newline is valid. Consecutive newlines represent empty lines, and a
 newline terminates the preceding line rather than belonging to it.
 
-The search performs binary search by file offset. Regular files use a read-only
-memory mapping and compare only the visited lines; generic readers use bounded
-positioned reads. Its runtime is logarithmic in file size plus the chunks needed
-to resolve those lines. Mapped input must remain stable while the search runs;
-concurrent truncation is unsupported. Generic-reader memory use is bounded by
-fixed read buffers, apart from the returned output line.
+The search performs binary search by file offset. Regular files up to 1 GiB use
+a read-only memory mapping and compare only the visited lines; larger regular
+files, and generic readers, use bounded positioned reads. Its runtime is
+logarithmic in file size plus the chunks needed to resolve those lines. Mapped
+input must remain stable while the search runs; concurrent truncation is
+unsupported. Generic-reader memory use is bounded by fixed read buffers, apart
+from the returned output line.
 
 ## Architecture
 
