@@ -47,7 +47,7 @@ To build directly with CMake:
 ```console
 $ cmake -S . -B build -DCMAKE_CXX_COMPILER=clang++
 $ cmake --build build
-$ ./build/find carr vegetables.txt
+$ ./build/find carr tests/fixtures/vegetables.txt
 ```
 
 ## Behaviour and performance

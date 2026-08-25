@@ -134,12 +134,10 @@ if(BUILD_TESTING)
   enable_strict_warnings(find_tests)
   enable_hardening(find_tests)
   add_test(NAME unit COMMAND find_tests)
-  add_test(NAME integration-fruit COMMAND find apri ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/vegetables.txt)
-  set_tests_properties(integration-fruit PROPERTIES PASS_REGULAR_EXPRESSION "apricot")
-  add_test(NAME integration-usage-error COMMAND find)
-  set_tests_properties(integration-usage-error PROPERTIES WILL_FAIL TRUE)
-  add_test(NAME integration-no-match COMMAND find z ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/vegetables.txt)
-  set_tests_properties(integration-no-match PROPERTIES WILL_FAIL TRUE)
-  add_test(NAME integration-open-error COMMAND find word ${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/missing.txt)
-  set_tests_properties(integration-open-error PROPERTIES WILL_FAIL TRUE)
+  add_test(
+    NAME integration-cli-contract
+    COMMAND ${CMAKE_COMMAND}
+            -DFIND_EXECUTABLE=$<TARGET_FILE:find>
+            -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures/vegetables.txt
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/cli/cli_contract.cmake)
 endif()
