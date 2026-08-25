@@ -27,6 +27,7 @@ jobs:
       CC: /usr/lib/llvm-21/bin/clang
       CXX: /usr/lib/llvm-21/bin/clang++
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:
