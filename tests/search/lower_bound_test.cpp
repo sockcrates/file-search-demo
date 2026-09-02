@@ -1,4 +1,3 @@
-#include "file_io/contiguous_reader.h"
 #include "file_io/file_reader.h"
 #include "file_io/memory_reader.h"
 #include "file_io/reader.h"
@@ -23,7 +22,7 @@ public:
   explicit CountingReader(const find::file_io::Reader &reader) : reader_(&reader) {}
 
   [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
-  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
+  std::size_t read(std::uint64_t offset, std::span<char> destination) const override {
     ++read_calls_;
     const auto count = reader_->read(offset, destination);
     bytes_read_ += count;
@@ -44,7 +43,7 @@ public:
       : reader_(&reader), maximum_read_(maximum_read) {}
 
   [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
-  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
+  std::size_t read(std::uint64_t offset, std::span<char> destination) const override {
     return reader_->read(offset, destination.first(std::min(destination.size(), maximum_read_)));
   }
 
@@ -53,13 +52,13 @@ private:
   std::size_t maximum_read_;
 };
 
-class NoReadContiguousReader final : public find::file_io::ContiguousReader {
+class NoReadBytesReader final : public find::file_io::Reader {
 public:
-  explicit NoReadContiguousReader(const char *input) : backing_(input) {}
+  explicit NoReadBytesReader(const char *input) : backing_(input) {}
 
   [[nodiscard]] std::uint64_t size() const override { return backing_.size(); }
-  [[nodiscard]] std::span<const std::byte> bytes() const override { return backing_.bytes(); }
-  std::size_t read(std::uint64_t /*offset*/, std::span<std::byte> /*destination*/) const override {
+  [[nodiscard]] std::string_view bytes() const override { return backing_.bytes(); }
+  std::size_t read(std::uint64_t /*offset*/, std::span<char> /*destination*/) const override {
     throw std::runtime_error("direct path must not read");
   }
 
@@ -191,8 +190,8 @@ TEST(lower_bound_reuses_a_centered_probe_for_a_short_midpoint_line) {
   REQUIRE(reader.read_calls() == 1U);
 }
 
-TEST(lower_bound_uses_a_contiguous_reader_without_copy_reads) {
-  NoReadContiguousReader reader("apple\napricot\navocado\nbanana");
+TEST(lower_bound_uses_reader_bytes_without_copy_reads) {
+  NoReadBytesReader reader("apple\napricot\navocado\nbanana");
   REQUIRE(find::search::lower_bound(reader, "apri") == "apricot");
 }
 

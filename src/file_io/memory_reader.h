@@ -1,22 +1,16 @@
 #ifndef FIND_FILE_IO_MEMORY_READER_H
 #define FIND_FILE_IO_MEMORY_READER_H
 
-#include "file_io/contiguous_reader.h"
+#include "file_io/reader.h"
 
-#include <span>
+#include <string>
 #include <string_view>
-#include <vector>
 
 namespace find::file_io {
 
 /** @brief In-memory implementation of the random-access Reader interface. */
-class MemoryReader final : public ContiguousReader {
+class MemoryReader final : public Reader {
 public:
-  /**
-   * @brief Copy @p bytes into a read-only random-access buffer.
-   * @param bytes Source bytes copied into this reader.
-   */
-  explicit MemoryReader(std::span<const std::byte> bytes);
   /**
    * @brief Copy the explicitly sized text bytes into the buffer.
    * @param text Source text bytes copied into this reader.
@@ -27,13 +21,13 @@ public:
   explicit MemoryReader(std::string_view text);
   /** @copydoc Reader::size */
   [[nodiscard]] std::uint64_t size() const override;
-  /** @copydoc ContiguousReader::bytes */
-  [[nodiscard]] std::span<const std::byte> bytes() const override;
+  /** @copydoc Reader::bytes */
+  [[nodiscard]] std::string_view bytes() const override;
   /** @copydoc Reader::read */
-  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override;
+  std::size_t read(std::uint64_t offset, std::span<char> destination) const override;
 
 private:
-  std::vector<std::byte> bytes_;
+  std::string bytes_;
 };
 
 } // namespace

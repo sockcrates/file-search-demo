@@ -22,7 +22,7 @@ constexpr std::uint64_t max_mapped_file_size = std::uint64_t{1} << 30U;
 
 class FileReader::FileDescriptor final {
 public:
-  explicit FileDescriptor(int descriptor) noexcept : descriptor_(descriptor) {}
+  FileDescriptor() = default;
   ~FileDescriptor() noexcept {
     if (descriptor_ != -1) {
       static_cast<void>(close(descriptor_));
@@ -35,40 +35,57 @@ public:
   FileDescriptor &operator=(FileDescriptor &&) = delete;
 
   [[nodiscard]] int get() const noexcept { return descriptor_; }
+  void reset(int descriptor = -1) noexcept {
+    if (descriptor_ != -1) {
+      static_cast<void>(close(descriptor_));
+    }
+    descriptor_ = descriptor;
+  }
 
 private:
-  int descriptor_;
+  int descriptor_ = -1;
 };
 
 class FileReader::Mapping final {
 public:
-  Mapping(void *address, std::size_t size) noexcept : address_(address), size_(size) {}
-  ~Mapping() noexcept { static_cast<void>(munmap(address_, size_)); }
+  Mapping() = default;
+  ~Mapping() noexcept {
+    if (address_ != nullptr) {
+      static_cast<void>(munmap(address_, size_));
+    }
+  }
 
   Mapping(const Mapping &) = delete;
   Mapping &operator=(const Mapping &) = delete;
   Mapping(Mapping &&) = delete;
   Mapping &operator=(Mapping &&) = delete;
 
-  [[nodiscard]] const std::byte *data() const noexcept {
-    return static_cast<const std::byte *>(address_);
+  [[nodiscard]] const char *data() const noexcept { return static_cast<const char *>(address_); }
+  void reset(void *address, std::size_t size) noexcept {
+    if (address_ != nullptr) {
+      static_cast<void>(munmap(address_, size_));
+    }
+    address_ = address;
+    size_ = size;
   }
 
 private:
-  void *address_;
-  std::size_t size_;
+  void *address_ = nullptr;
+  std::size_t size_ = 0;
 };
 
-FileReader::FileReader(const std::filesystem::path &path) {
+FileReader::FileReader(const std::filesystem::path &path)
+    : descriptor_(std::make_unique<FileDescriptor>()), path_(path),
+      mapping_(std::make_unique<Mapping>()) {
   constexpr int flags = O_RDONLY | O_CLOEXEC | O_NONBLOCK;
   const auto opened_descriptor = open(path.c_str(), flags);
   if (opened_descriptor == -1) {
     throw FileError(FileOperation::open, path, captured_errno());
   }
-  auto descriptor = std::make_unique<FileDescriptor>(opened_descriptor);
+  descriptor_->reset(opened_descriptor);
 
   struct stat details{};
-  if (fstat(descriptor->get(), &details) == -1) {
+  if (fstat(descriptor_->get(), &details) == -1) {
     throw FileError(FileOperation::inspect, path, captured_errno());
   }
   if (details.st_size < 0) {
@@ -80,21 +97,18 @@ FileReader::FileReader(const std::filesystem::path &path) {
                     std::make_error_code(std::errc::invalid_argument));
   }
   const auto size = static_cast<std::uint64_t>(details.st_size);
-  std::unique_ptr<Mapping> mapping;
   if (size != 0U && size <= max_mapped_file_size &&
       size <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max())) {
-    const auto mapped =
-        mmap(nullptr, static_cast<std::size_t>(size), PROT_READ, MAP_PRIVATE, descriptor->get(), 0);
+    const auto mapped = mmap(nullptr, static_cast<std::size_t>(size), PROT_READ, MAP_PRIVATE,
+                             descriptor_->get(), 0);
     if (mapped == MAP_FAILED) {
       throw FileError(FileOperation::map, path, captured_errno());
     }
-    mapping = std::make_unique<Mapping>(mapped, static_cast<std::size_t>(size));
+    mapping_->reset(mapped, static_cast<std::size_t>(size));
+    descriptor_->reset();
   }
 
   size_ = size;
-  descriptor_ = std::move(descriptor);
-  path_ = path;
-  mapping_ = std::move(mapping);
 }
 
 FileReader::~FileReader() = default;
@@ -105,14 +119,14 @@ FileReader &FileReader::operator=(FileReader &&) noexcept = default;
 
 std::uint64_t FileReader::size() const { return size_; }
 
-std::span<const std::byte> FileReader::bytes() const {
-  if (mapping_ == nullptr) {
+std::string_view FileReader::bytes() const {
+  if (mapping_->data() == nullptr) {
     return {};
   }
   return {mapping_->data(), static_cast<std::size_t>(size_)};
 }
 
-std::size_t FileReader::read(std::uint64_t offset, std::span<std::byte> destination) const {
+std::size_t FileReader::read(std::uint64_t offset, std::span<char> destination) const {
   if (offset >= size_ || destination.empty())
     return 0;
   if (offset > static_cast<std::uint64_t>(std::numeric_limits<off_t>::max())) {
@@ -120,6 +134,10 @@ std::size_t FileReader::read(std::uint64_t offset, std::span<std::byte> destinat
   }
   const auto allowed = std::min<std::uint64_t>(destination.size(), size_ - offset);
   const auto requested = static_cast<std::size_t>(allowed);
+  if (mapping_->data() != nullptr) {
+    std::copy_n(mapping_->data() + static_cast<std::size_t>(offset), requested, destination.data());
+    return requested;
+  }
   for (;;) {
     const auto count =
         pread(descriptor_->get(), destination.data(), requested, static_cast<off_t>(offset));

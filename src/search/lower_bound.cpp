@@ -1,59 +1,18 @@
 #include "search/lower_bound.h"
 
-#include "file_io/contiguous_reader.h"
 #include "line_scanning/line_comparator.h"
 #include "line_scanning/line_scanner.h"
 
 #include <algorithm>
-#include <cstring>
 #include <limits>
 
 namespace find::search {
 namespace {
 
-struct ContiguousComparison {
-  std::strong_ordering ordering = std::strong_ordering::equal;
-  std::optional<std::size_t> end;
-};
-
-ContiguousComparison compare_contiguous_line(const char *data, std::size_t size, std::size_t start,
-                                             std::string_view term) {
-  auto offset = start;
-  std::size_t term_offset = 0;
-  while (offset < size) {
-    const auto term_remaining = term.size() - term_offset;
-    const auto capacity = std::min(size - offset, term_remaining + 1);
-    const auto *newline = static_cast<const char *>(std::memchr(data + offset, '\n', capacity));
-    const auto content_size =
-        newline == nullptr ? capacity : static_cast<std::size_t>(newline - (data + offset));
-    const auto common_size = std::min(content_size, term_remaining);
-    if (common_size != 0) {
-      const auto comparison = std::memcmp(data + offset, term.data() + term_offset, common_size);
-      if (comparison < 0)
-        return {std::strong_ordering::less, std::nullopt};
-      if (comparison > 0)
-        return {std::strong_ordering::greater, std::nullopt};
-    }
-    offset += common_size;
-    term_offset += common_size;
-    if (common_size < content_size)
-      return {std::strong_ordering::greater, std::nullopt};
-    if (newline != nullptr)
-      return {term_offset == term.size() ? std::strong_ordering::equal : std::strong_ordering::less,
-              offset};
-    if (term_offset == term.size() && offset == size)
-      return {std::strong_ordering::equal, std::nullopt};
-  }
-  return {term_offset == term.size() ? std::strong_ordering::equal : std::strong_ordering::less,
-          std::nullopt};
-}
-
-std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> bytes,
-                                                  std::string_view term) {
+std::optional<std::string> lower_bound_contiguous(std::string_view bytes, std::string_view term) {
   if (bytes.empty())
     return std::nullopt;
 
-  const auto *data = reinterpret_cast<const char *>(bytes.data());
   const auto size = bytes.size();
   std::size_t low = 0;
   std::size_t high = size;
@@ -61,25 +20,16 @@ std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> byt
 
   while (low < high) {
     const auto midpoint = low + (high - low) / 2;
-    auto start = midpoint;
-    while (start != 0 && data[start - 1] != '\n')
-      --start;
-    const auto comparison = compare_contiguous_line(data, size, start, term);
-    const auto ordering = comparison.ordering;
+    const auto previous_newline =
+        midpoint == 0 ? std::string_view::npos : bytes.rfind('\n', midpoint - 1);
+    const auto start = previous_newline == std::string_view::npos ? 0 : previous_newline + 1;
+    const auto line_end = bytes.find('\n', start);
+    const auto end = line_end == std::string_view::npos ? size : line_end;
+    const auto ordering = bytes.substr(start, end - start) <=> term;
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
-      auto end = comparison.end;
-      if (!end) {
-        // Finding start already examined the prefix through midpoint. Resume at
-        // midpoint so an early mismatch on a very long line is not scanned twice.
-        // At a newline, this correctly returns midpoint as the current line's end.
-        auto line_end = midpoint;
-        while (line_end < size && data[line_end] != '\n')
-          ++line_end;
-        end = line_end;
-      }
-      low = *end < size ? *end + 1 : size;
+      low = end < size ? end + 1 : size;
     } else {
       best_start = start;
       high = start;
@@ -87,24 +37,21 @@ std::optional<std::string> lower_bound_contiguous(std::span<const std::byte> byt
   }
   if (!best_start)
     return std::nullopt;
-  auto end = *best_start;
-  while (end < size && data[end] != '\n')
-    ++end;
-  return std::string(data + *best_start, end - *best_start);
+  const auto line_end = bytes.find('\n', *best_start);
+  const auto end = line_end == std::string_view::npos ? size : line_end;
+  return std::string(bytes.substr(*best_start, end - *best_start));
 }
 
 } // namespace
 
 std::optional<std::string> lower_bound(const file_io::Reader &reader, std::string_view term) {
   const auto file_size = reader.size();
-  if (const auto *contiguous = dynamic_cast<const file_io::ContiguousReader *>(&reader)) {
-    const auto bytes = contiguous->bytes();
-    const auto size_matches =
-        file_size <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) &&
-        bytes.size() == static_cast<std::size_t>(file_size);
-    if (size_matches)
-      return lower_bound_contiguous(bytes, term);
-  }
+  const auto bytes = reader.bytes();
+  const auto size_matches =
+      file_size <= static_cast<std::uint64_t>(std::numeric_limits<std::size_t>::max()) &&
+      bytes.size() == static_cast<std::size_t>(file_size);
+  if (size_matches)
+    return lower_bound_contiguous(bytes, term);
   if (file_size == 0)
     return std::nullopt;
 
@@ -120,9 +67,9 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
     const auto midpoint = low + (high - low) / 2;
     const auto probe = scanner.probe_containing(midpoint, term);
     const auto start = probe ? probe->range.start : scanner.line_start_containing(midpoint);
-    const auto comparison = probe ? std::optional<line_scanning::LineComparison>{}
-                                  : std::optional{comparator.compare_from(start, file_size, term)};
-    const auto ordering = probe ? probe->ordering : comparison->ordering;
+    const auto comparison =
+        probe ? line_scanning::LineComparison{} : comparator.compare_from(start, file_size, term);
+    const auto ordering = probe ? probe->ordering : comparison.ordering;
     if (ordering == std::strong_ordering::equal)
       return std::string(term);
     if (ordering == std::strong_ordering::less) {
@@ -130,7 +77,7 @@ std::optional<std::string> lower_bound(const file_io::Reader &reader, std::strin
       // ends early, continue from midpoint to avoid revisiting that prefix. A
       // midpoint at a newline is itself the current line's end.
       const auto end =
-          probe ? probe->range.end : comparison->end.value_or(scanner.line_end(midpoint));
+          probe ? probe->range.end : comparison.end.value_or(scanner.line_end(midpoint));
       const auto next = end < file_size ? end + 1 : file_size;
       if (next <= low)
         break;

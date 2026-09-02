@@ -18,14 +18,14 @@ class CountingReader final : public find::file_io::Reader {
 public:
   explicit CountingReader(const find::file_io::Reader &reader) : reader_(&reader) {}
   [[nodiscard]] std::uint64_t size() const override { return reader_->size(); }
-  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override {
+  std::size_t read(std::uint64_t offset, std::span<char> destination) const override {
     ++calls_;
     const auto count = reader_->read(offset, destination);
     bytes_ += count;
     return count;
   }
   [[nodiscard]] std::size_t calls() const noexcept { return calls_; }
-  [[nodiscard]] std::size_t bytes() const noexcept { return bytes_; }
+  [[nodiscard]] std::size_t bytes_read() const noexcept { return bytes_; }
 
 private:
   const find::file_io::Reader *reader_;
@@ -41,7 +41,7 @@ void run(std::string_view label, const std::string &data, std::string_view term)
   const auto elapsed = std::chrono::steady_clock::now() - started;
   std::cout << label << ": "
             << std::chrono::duration_cast<std::chrono::microseconds>(elapsed).count() << " us, "
-            << reader.bytes() << " bytes read, " << reader.calls() << " reads, result=";
+            << reader.bytes_read() << " bytes read, " << reader.calls() << " reads, result=";
   if (!result) {
     std::cout << "<none>\n";
     return;

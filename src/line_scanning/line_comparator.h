@@ -6,8 +6,8 @@
 #include <compare>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
-#include <vector>
 
 namespace find::line_scanning {
 
@@ -32,17 +32,6 @@ public:
    */
   explicit LineComparator(const file_io::Reader &reader,
                           std::size_t buffer_size = default_comparator_buffer_size);
-
-  /**
-   * @brief Compare a line range with a search term using unsigned ASCII bytes.
-   * @param start Inclusive start of the line range.
-   * @param end Exclusive end of the line range.
-   * @param term Value to compare against the line.
-   * @pre `start <= end <= reader.size()`.
-   * @return The ordering of the line relative to @p term.
-   */
-  [[nodiscard]] std::strong_ordering compare(std::uint64_t start, std::uint64_t end,
-                                             std::string_view term) const;
 
   /**
    * @brief Compare the line beginning at @p start without first locating its end.
@@ -70,7 +59,7 @@ public:
 private:
   const file_io::Reader &reader_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members):
                                   // non-null borrowed reader
-  mutable std::vector<std::byte> buffer_;
+  mutable std::string buffer_;
 };
 
 } // namespace

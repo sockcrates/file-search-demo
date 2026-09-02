@@ -1,17 +1,15 @@
 #include "line_scanning/line_scanner.h"
 
 #include <algorithm>
-#include <cstring>
 #include <stdexcept>
 
 namespace find::line_scanning {
 namespace {
-constexpr std::byte newline{static_cast<unsigned char>('\n')};
 constexpr std::size_t probe_buffer_size = 512;
 } // namespace
 
 LineScanner::LineScanner(const file_io::Reader &reader, std::size_t buffer_size)
-    : reader_(reader), buffer_(buffer_size) {
+    : reader_(reader), buffer_(buffer_size, '\0') {
   if (buffer_size == 0)
     throw std::invalid_argument("line scanner buffer must not be empty");
 }
@@ -32,10 +30,9 @@ std::uint64_t LineScanner::line_start_containing(std::uint64_t offset) const {
         break;
       count += read_count;
     }
-    for (std::size_t index = count; index > 0; --index) {
-      if (buffer_[index - 1] == newline)
-        return chunk_start + index;
-    }
+    const auto newline_position = std::string_view{buffer_.data(), count}.rfind('\n');
+    if (newline_position != std::string_view::npos)
+      return chunk_start + newline_position + 1;
     if (count < requested)
       break;
     position = chunk_start;
@@ -50,18 +47,12 @@ std::uint64_t LineScanner::line_end(std::uint64_t start) const {
     const auto count = reader_.read(position, std::span{buffer_});
     if (count == 0)
       break;
-    const auto *newline_position =
-        static_cast<const std::byte *>(std::memchr(buffer_.data(), static_cast<int>('\n'), count));
-    if (newline_position != nullptr)
-      return position + static_cast<std::uint64_t>(newline_position - buffer_.data());
+    const auto newline_position = std::string_view{buffer_.data(), count}.find('\n');
+    if (newline_position != std::string_view::npos)
+      return position + static_cast<std::uint64_t>(newline_position);
     position += count;
   }
   return file_size;
-}
-
-LineRange LineScanner::line_containing(std::uint64_t offset) const {
-  const auto start = line_start_containing(offset);
-  return {start, line_end(start)};
 }
 
 std::optional<LineProbe> LineScanner::probe_containing(std::uint64_t offset,
@@ -84,27 +75,23 @@ std::optional<LineProbe> LineScanner::probe_containing(std::uint64_t offset,
   if (anchor_index > count)
     return std::nullopt;
   std::size_t start_index = anchor_index;
-  while (start_index > 0 && buffer_[start_index - 1] != newline)
-    --start_index;
+  const auto window = std::string_view{buffer_.data(), count};
+  if (anchor_index != 0) {
+    const auto newline_position = window.rfind('\n', anchor_index - 1);
+    if (newline_position != std::string_view::npos)
+      start_index = newline_position + 1;
+    else
+      start_index = 0;
+  }
   if (start_index == 0 && window_start != 0)
     return std::nullopt;
 
-  const auto *end_position = static_cast<const std::byte *>(
-      std::memchr(buffer_.data() + start_index, static_cast<int>('\n'), count - start_index));
-  std::size_t end_index = count;
-  if (end_position != nullptr)
-    end_index = static_cast<std::size_t>(end_position - buffer_.data());
-  else if (window_start + count != file_size)
+  const auto end_position = window.find('\n', start_index);
+  const auto end_index = end_position == std::string_view::npos ? count : end_position;
+  if (end_position == std::string_view::npos && window_start + count != file_size)
     return std::nullopt;
 
-  const auto line_size = end_index - start_index;
-  const auto common_size = std::min(line_size, term.size());
-  const auto comparison = std::memcmp(buffer_.data() + start_index, term.data(), common_size);
-  const auto ordering = comparison < 0            ? std::strong_ordering::less
-                        : comparison > 0          ? std::strong_ordering::greater
-                        : line_size < term.size() ? std::strong_ordering::less
-                        : line_size > term.size() ? std::strong_ordering::greater
-                                                  : std::strong_ordering::equal;
+  const auto ordering = window.substr(start_index, end_index - start_index) <=> term;
   return LineProbe{{window_start + start_index, window_start + end_index}, ordering};
 }
 

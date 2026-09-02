@@ -1,7 +1,7 @@
 #ifndef FIND_FILE_IO_FILE_READER_H
 #define FIND_FILE_IO_FILE_READER_H
 
-#include "file_io/contiguous_reader.h"
+#include "file_io/reader.h"
 
 #include <filesystem>
 #include <memory>
@@ -14,7 +14,7 @@ namespace find::file_io {
  * Smaller files are memory-mapped for the reader's lifetime; larger files are
  * read with positioned I/O. Concurrent truncation of the file is unsupported.
  */
-class FileReader final : public ContiguousReader {
+class FileReader final : public Reader {
 public:
   /**
    * @brief Open a stable regular file for read-only random access.
@@ -36,13 +36,13 @@ public:
 
   /** @copydoc Reader::size */
   [[nodiscard]] std::uint64_t size() const override;
-  /** @copydoc ContiguousReader::bytes
-   *  @return The mapped contents, or an empty span when the file is too large
+  /** @copydoc Reader::bytes
+   *  @return The mapped contents, or an empty view when the file is too large
    *          to map as a whole.
    */
-  [[nodiscard]] std::span<const std::byte> bytes() const override;
+  [[nodiscard]] std::string_view bytes() const override;
   /** @copydoc Reader::read */
-  std::size_t read(std::uint64_t offset, std::span<std::byte> destination) const override;
+  std::size_t read(std::uint64_t offset, std::span<char> destination) const override;
 
 private:
   class FileDescriptor;

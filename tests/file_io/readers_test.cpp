@@ -4,7 +4,6 @@
 #include "test_support.h"
 
 #include <array>
-#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -12,12 +11,12 @@
 
 TEST(memory_reader_handles_boundaries) {
   find::file_io::MemoryReader reader("abcdef");
-  std::array<std::byte, 4> bytes{};
+  std::array<char, 4> bytes{};
   REQUIRE(reader.size() == 6);
   REQUIRE(reader.read(0, bytes) == 4);
-  REQUIRE(std::to_integer<char>(bytes[0]) == 'a');
+  REQUIRE(bytes[0] == 'a');
   REQUIRE(reader.read(4, bytes) == 2);
-  REQUIRE(std::to_integer<char>(bytes[1]) == 'f');
+  REQUIRE(bytes[1] == 'f');
   REQUIRE(reader.read(6, bytes) == 0);
   REQUIRE(reader.read(99, bytes) == 0);
   REQUIRE(reader.read(UINT64_MAX, bytes) == 0);
@@ -25,7 +24,7 @@ TEST(memory_reader_handles_boundaries) {
 
 TEST(memory_reader_handles_empty_input) {
   find::file_io::MemoryReader reader("");
-  std::array<std::byte, 1> byte{};
+  std::array<char, 1> byte{};
   REQUIRE(reader.size() == 0);
   REQUIRE(reader.read(0, byte) == 0);
 }
@@ -35,17 +34,17 @@ TEST(memory_reader_accepts_explicitly_sized_binary_text) {
   find::file_io::MemoryReader reader(text);
   const auto bytes = reader.bytes();
   REQUIRE(bytes.size() == text.size());
-  REQUIRE(std::to_integer<char>(bytes[0]) == 'a');
-  REQUIRE(std::to_integer<char>(bytes[1]) == '\0');
-  REQUIRE(std::to_integer<char>(bytes[2]) == 'b');
+  REQUIRE(bytes[0] == 'a');
+  REQUIRE(bytes[1] == '\0');
+  REQUIRE(bytes[2] == 'b');
 }
 
 TEST(memory_reader_exposes_a_contiguous_view) {
   find::file_io::MemoryReader reader("abcdef");
   const auto bytes = reader.bytes();
   REQUIRE(bytes.size() == reader.size());
-  REQUIRE(std::to_integer<char>(bytes[0]) == 'a');
-  REQUIRE(std::to_integer<char>(bytes[5]) == 'f');
+  REQUIRE(bytes[0] == 'a');
+  REQUIRE(bytes[5] == 'f');
 }
 
 TEST(file_reader_reads_binary_data_without_loading_the_file) {
@@ -56,16 +55,16 @@ TEST(file_reader_reads_binary_data_without_loading_the_file) {
   }
   find::file_io::FileReader reader(path);
   constexpr std::size_t buffer_size = 32U;
-  std::array<std::byte, buffer_size> bytes{};
+  std::array<char, buffer_size> bytes{};
   REQUIRE(reader.size() == 24);
   REQUIRE(reader.read(6, std::span{bytes}.first(8U)) == 8);
-  REQUIRE(std::to_integer<char>(bytes[0]) == '\n');
-  REQUIRE(std::to_integer<char>(bytes[1]) == 'l');
+  REQUIRE(bytes[0] == '\n');
+  REQUIRE(bytes[1] == 'l');
   REQUIRE(reader.read(reader.size(), bytes) == 0);
   const auto mapped = reader.bytes();
   REQUIRE(mapped.size() == reader.size());
-  REQUIRE(std::to_integer<char>(mapped[6]) == '\n');
-  REQUIRE(std::to_integer<char>(mapped[7]) == 'l');
+  REQUIRE(mapped[6] == '\n');
+  REQUIRE(mapped[7] == 'l');
   std::filesystem::remove(path);
 }
 
@@ -87,11 +86,11 @@ TEST(file_reader_uses_positioned_reads_for_files_larger_than_one_gibibyte) {
     output.put('z');
   }
   find::file_io::FileReader reader(path);
-  std::array<std::byte, 1> byte{};
+  std::array<char, 1> byte{};
   REQUIRE(reader.size() == gibibyte + 1U);
   REQUIRE(reader.bytes().empty());
   REQUIRE(reader.read(gibibyte, byte) == 1U);
-  REQUIRE(std::to_integer<char>(byte[0]) == 'z');
+  REQUIRE(byte[0] == 'z');
   std::filesystem::remove(path);
 }
 
@@ -106,10 +105,13 @@ TEST(file_reader_maps_binary_bytes_and_remains_valid_after_unlink) {
   std::filesystem::remove(path);
   const auto mapped = reader.bytes();
   REQUIRE(mapped.size() == 4);
-  REQUIRE(std::to_integer<char>(mapped[0]) == 'a');
-  REQUIRE(std::to_integer<char>(mapped[1]) == '\0');
-  REQUIRE(std::to_integer<char>(mapped[2]) == 'b');
-  REQUIRE(std::to_integer<char>(mapped[3]) == '\n');
+  REQUIRE(mapped[0] == 'a');
+  REQUIRE(mapped[1] == '\0');
+  REQUIRE(mapped[2] == 'b');
+  REQUIRE(mapped[3] == '\n');
+  std::array<char, 4> bytes{};
+  REQUIRE(reader.read(0, bytes) == bytes.size());
+  REQUIRE((bytes == std::array<char, 4>{'a', '\0', 'b', '\n'}));
 }
 
 TEST(file_reader_reports_an_open_failure) {

@@ -1,40 +1,14 @@
 #include "line_scanning/line_comparator.h"
 
 #include <algorithm>
-#include <cstring>
 #include <stdexcept>
 
 namespace find::line_scanning {
 
 LineComparator::LineComparator(const file_io::Reader &reader, std::size_t buffer_size)
-    : reader_(reader), buffer_(buffer_size) {
+    : reader_(reader), buffer_(buffer_size, '\0') {
   if (buffer_size == 0)
     throw std::invalid_argument("line comparator buffer must not be empty");
-}
-
-std::strong_ordering LineComparator::compare(std::uint64_t start, std::uint64_t end,
-                                             std::string_view term) const {
-  auto offset = start;
-  std::size_t term_offset = 0;
-  while (offset < end && term_offset < term.size()) {
-    const auto count = reader_.read(
-        offset,
-        std::span{buffer_}.first(static_cast<std::size_t>(std::min<std::uint64_t>(
-            buffer_.size(),
-            std::min(end - offset, static_cast<std::uint64_t>(term.size() - term_offset))))));
-    const auto comparison = std::memcmp(buffer_.data(), term.data() + term_offset, count);
-    if (comparison < 0)
-      return std::strong_ordering::less;
-    if (comparison > 0)
-      return std::strong_ordering::greater;
-    offset += count;
-    term_offset += count;
-  }
-  if (offset < end)
-    return std::strong_ordering::greater;
-  if (term_offset < term.size())
-    return std::strong_ordering::less;
-  return std::strong_ordering::equal;
 }
 
 LineComparison LineComparator::compare_from(std::uint64_t start, std::uint64_t file_size,
@@ -51,17 +25,16 @@ LineComparison LineComparator::compare_from(std::uint64_t start, std::uint64_t f
     if (count == 0)
       throw std::runtime_error("unexpected end of file while comparing line");
 
-    const auto *newline_position =
-        static_cast<const std::byte *>(std::memchr(buffer_.data(), static_cast<int>('\n'), count));
-    const auto content_size = newline_position == nullptr
-                                  ? count
-                                  : static_cast<std::size_t>(newline_position - buffer_.data());
+    const auto chunk = std::string_view{buffer_.data(), count};
+    const auto newline_position = chunk.find('\n');
+    const auto content_size = newline_position == std::string_view::npos ? count : newline_position;
     const auto common_size = std::min(content_size, term_remaining);
     if (common_size != 0) {
-      const auto comparison = std::memcmp(buffer_.data(), term.data() + term_offset, common_size);
-      if (comparison < 0)
+      const auto comparison =
+          chunk.substr(0, common_size) <=> term.substr(term_offset, common_size);
+      if (comparison == std::strong_ordering::less)
         return {std::strong_ordering::less, std::nullopt};
-      if (comparison > 0)
+      if (comparison == std::strong_ordering::greater)
         return {std::strong_ordering::greater, std::nullopt};
     }
 
@@ -69,7 +42,7 @@ LineComparison LineComparator::compare_from(std::uint64_t start, std::uint64_t f
     term_offset += common_size;
     if (common_size < content_size)
       return {std::strong_ordering::greater, std::nullopt};
-    if (newline_position != nullptr)
+    if (newline_position != std::string_view::npos)
       return {term_offset == term.size() ? std::strong_ordering::equal : std::strong_ordering::less,
               offset};
     if (term_offset == term.size() && offset == file_size)
@@ -88,7 +61,7 @@ std::string LineComparator::read_line(std::uint64_t start, std::uint64_t end) co
                                  std::min<std::uint64_t>(buffer_.size(), end - offset))));
     if (count == 0)
       throw std::runtime_error("unexpected end of file while reading line");
-    result.append(reinterpret_cast<const char *>(buffer_.data()), count);
+    result.append(buffer_.data(), count);
     offset += count;
   }
   return result;

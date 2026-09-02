@@ -57,8 +57,9 @@ trailing newline is valid. Consecutive newlines represent empty lines, and a
 newline terminates the preceding line rather than belonging to it.
 
 The search performs binary search by file offset. Regular files up to 1 GiB use
-a read-only memory mapping and compare only the visited lines; larger regular
-files, and generic readers, use bounded positioned reads. Its runtime is
+a read-only memory mapping and compare only the visited lines; their file
+descriptor is closed after mapping. Larger regular files use bounded positioned
+reads, as do generic readers. Its runtime is
 logarithmic in file size plus the chunks needed to resolve those lines. Mapped
 input must remain stable while the search runs; concurrent truncation is
 unsupported. Generic-reader memory use is bounded by fixed read buffers, apart
@@ -67,8 +68,8 @@ from the returned output line.
 ## Architecture
 
 - `cli` parses command-line arguments and owns usage errors.
-- `file_io` provides the `Reader` abstraction, optional contiguous views, and file/memory
-  implementations.
+- `file_io` provides the `Reader` abstraction, its optional contiguous view capability, and
+  file/memory implementations.
 - `line_scanning` locates line ranges and compares or materializes them incrementally.
 - `search` implements the lower-bound binary search.
 

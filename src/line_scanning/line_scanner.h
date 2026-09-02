@@ -6,8 +6,8 @@
 #include <compare>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
-#include <vector>
 
 namespace find::line_scanning {
 
@@ -63,13 +63,6 @@ public:
   [[nodiscard]] std::uint64_t line_end(std::uint64_t start) const;
 
   /**
-   * @brief Return the newline-excluding range of the line containing @p offset.
-   * @param offset Byte position, clamped to the reader's end when larger.
-   * @return The containing line's half-open range, or `{0, 0}` for an empty reader.
-   */
-  [[nodiscard]] LineRange line_containing(std::uint64_t offset) const;
-
-  /**
    * @brief Compare the line around @p offset when it fits in one centered buffer.
    * @param offset Byte position whose line is probed.
    * @param term Search term compared using unsigned ASCII bytes.
@@ -85,7 +78,7 @@ public:
 private:
   const file_io::Reader &reader_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members):
                                   // non-null borrowed reader
-  mutable std::vector<std::byte> buffer_;
+  mutable std::string buffer_;
 };
 
 } // namespace
