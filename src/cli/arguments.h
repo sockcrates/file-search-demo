@@ -27,8 +27,6 @@ struct Arguments {
 enum class UsageErrorCode : std::uint8_t {
   /** @brief The invocation did not contain exactly a term and file path. */
   incorrect_argument_count,
-  /** @brief An argument entry required by the invocation was null. */
-  null_argument,
 };
 
 /**
